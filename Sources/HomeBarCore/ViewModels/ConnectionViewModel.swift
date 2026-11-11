@@ -5,9 +5,9 @@ import Observation
 
 @MainActor @Observable
 public final class ConnectionViewModel {
+    public let entities: EntityStore
     public var serverURL: String
     public var tokenInput = ""
-    public var showingSettings = false
     public private(set) var state: ConnectionState = .disconnected
     public private(set) var version: String?
     public private(set) var detail: String?
@@ -30,6 +30,7 @@ public final class ConnectionViewModel {
     /** Load the saved server, configure optional system recovery signals, and leave connection startup explicit. */
     public init(defaults: UserDefaults = .standard, store: any TokenStore = KeychainService(),
                 observeSystem: Bool = true, clientFactory: @escaping () -> HomeAssistantClient = { HomeAssistantClient() }) {
+        self.entities = EntityStore(defaults: defaults)
         self.defaults = defaults
         self.store = store
         self.clientFactory = clientFactory
@@ -66,6 +67,7 @@ public final class ConnectionViewModel {
         operation?.cancel()
         client?.disconnect()
         activeCredentials = nil
+        entities.disconnected()
         retryAllowed = false
         state = .disconnected
         version = nil
@@ -101,7 +103,7 @@ public final class ConnectionViewModel {
             var needsSave = save
             while !Task.isCancelled {
                 do {
-                    try await client.run(address: address, token: token) { version in
+                    try await client.run(address: address, token: token, entities: self.entities) { version in
                         if needsSave {
                             try self.store.save(token, for: address.baseURL.absoluteString)
                             self.defaults.set(address.baseURL.absoluteString, forKey: Self.serverKey)
@@ -114,7 +116,6 @@ public final class ConnectionViewModel {
                         self.version = version
                         self.state = .connected
                         self.detail = nil
-                        self.showingSettings = false
                         attempt = 0
                     }
                 } catch {
@@ -150,7 +151,7 @@ public final class ConnectionViewModel {
             guard path.status == .satisfied else { return }
             Task { @MainActor [weak self] in self?.recover() }
         }
-        monitor.start(queue: DispatchQueue(label: "com.homebar.network"))
+        monitor.start(queue: DispatchQueue(label: "com.jeromeberg.network"))
         self.monitor = monitor
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main

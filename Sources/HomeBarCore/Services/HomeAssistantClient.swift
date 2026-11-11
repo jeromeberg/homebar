@@ -25,7 +25,7 @@ final class URLSessionTransport: WebSocketTransport {
         configuration.httpCookieStorage = nil
         session = URLSession(configuration: configuration)
         socket = session.webSocketTask(with: url)
-        socket.maximumMessageSize = 1_048_576
+        socket.maximumMessageSize = 16 * 1_048_576
         socket.resume()
     }
 
@@ -76,7 +76,7 @@ public final class HomeAssistantClient {
     }
 
     /** Authenticate, notify the caller only after auth_ok, and receive until cancelled or disconnected. */
-    public func run(address: ServerAddress, token: String, authenticated: (String?) throws -> Void) async throws {
+    public func run(address: ServerAddress, token: String, entities: EntityStore? = nil, authenticated: (String?) throws -> Void) async throws {
         let socket = factory(address.webSocketURL)
         transport = socket
         defer { socket.close(); transport = nil }
@@ -109,7 +109,15 @@ public final class HomeAssistantClient {
             }
         }
         defer { heartbeat.cancel() }
-        while !Task.isCancelled { _ = try await socket.receive() }
+        let discovery = entities.map { EntityDiscovery(socket: socket, store: $0) }
+        defer { discovery?.close(); entities?.disconnected() }
+        if let entities { entities.begin(server: address.baseURL.absoluteString) }
+        try await discovery?.start()
+        while !Task.isCancelled {
+            let data = try await socket.receive()
+            try Task.checkCancellation()
+            try await discovery?.receive(data)
+        }
         throw CancellationError()
     }
 

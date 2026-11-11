@@ -19,5 +19,9 @@ struct HomeBarApp: App {
             MenuBarView(connection: connection)
         }
         .menuBarExtraStyle(.window)
+        Settings {
+            SettingsView(connection: connection)
+        }
+        .defaultSize(width: 580, height: 540)
     }
 }

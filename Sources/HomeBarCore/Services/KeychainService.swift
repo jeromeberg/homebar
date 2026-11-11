@@ -41,7 +41,7 @@ public struct KeychainService: TokenStore {
     /** Build an exact Keychain query for this app and server. */
     private func query(for server: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
-         kSecAttrService as String: "com.homebar.HomeBar.access-token",
+         kSecAttrService as String: "com.jeromeberg.HomeBar.access-token",
          kSecAttrAccount as String: server,
          kSecAttrSynchronizable as String: false]
     }

@@ -26,6 +26,10 @@ final class ScriptedSocket: WebSocketTransport {
     var closed = false
     var pending: CheckedContinuation<Data, any Error>?
 
+    var sentTypes: [String] {
+        sent.compactMap { (try? JSONSerialization.jsonObject(with: $0) as? [String: Any])?["type"] as? String }
+    }
+
     /** Configure a sequence of synthetic server frames. */
     init(_ messages: [String]) { self.messages = messages }
 
@@ -41,6 +45,14 @@ final class ScriptedSocket: WebSocketTransport {
 
     /** Simulate a healthy WebSocket ping. */
     func ping() async throws {}
+
+    /** Deliver a synthetic live frame to an active receiver or queue it for the next read. */
+    func push(_ message: String) {
+        if let receiver = pending {
+            pending = nil
+            receiver.resume(returning: Data(message.utf8))
+        } else { messages.append(message) }
+    }
 
     /** End pending reads like a disconnected WebSocket. */
     func close() {
@@ -183,7 +195,7 @@ struct ConnectionTests {
         model.disconnect()
         try await Task.sleep(for: .milliseconds(1100))
         #expect(model.state == .disconnected)
-        #expect(socket.sent.count == 1)
+        #expect(socket.sentTypes == ["auth", "config/area_registry/list", "config/device_registry/list", "config/entity_registry/list", "get_states"])
     }
 
     @Test
