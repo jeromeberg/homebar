@@ -14,10 +14,10 @@ struct AboutSettingsView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            Text("Native macOS menu bar dashboard for Home Assistant.")
+            Text("A lightweight, native macOS menu bar dashboard for Home Assistant.")
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Text("Copyright © Jerome Berg")
+            Text("Copyright © 2026 Jerome Berg")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
