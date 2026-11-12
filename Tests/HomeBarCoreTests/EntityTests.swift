@@ -250,7 +250,7 @@ struct EntityTests {
         #expect(store.errors.contains { $0.contains("response could not be read") })
         try await discovery.receive(Data(#"{"id":5,"type":"result","success":false,"error":{"code":"unauthorized","message":"sensitive-server-text"}}"#.utf8))
         #expect(!socket.sentTypes.contains("subscribe_events"))
-        try await Task.sleep(for: .milliseconds(60))
+        try await wait { !store.isLoading }
         #expect(!store.isLoading)
         #expect(!store.isLive)
         #expect(store.errors.contains { $0.contains("timed out") })
