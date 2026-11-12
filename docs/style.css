@@ -1,0 +1,152 @@
+:root {
+  color-scheme: light dark;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1d1d1f;
+  background: #f5f5f7;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  width: min(100% - 48px, 980px);
+  margin: auto;
+  padding: 80px 0 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 64px;
+}
+
+.intro {
+  max-width: 480px;
+}
+
+.eyebrow {
+  margin: 0 0 16px;
+  color: #6e6e73;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(48px, 7vw, 72px);
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 1.05;
+}
+
+.description {
+  margin: 24px 0 32px;
+  color: #6e6e73;
+  font-size: 23px;
+  line-height: 1.45;
+  letter-spacing: -0.025em;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.primary {
+  color: #fff;
+  background: #0071e3;
+}
+
+.primary:hover {
+  background: #0066cc;
+}
+
+.secondary {
+  color: #0066cc;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.secondary:hover {
+  background: #e8edf4;
+}
+
+.button:focus-visible {
+  outline: 3px solid #0071e3;
+  outline-offset: 4px;
+}
+
+.compatibility {
+  margin: 16px 0 0;
+  color: #6e6e73;
+  font-size: 12px;
+}
+
+.dashboard {
+  display: block;
+  width: 386px;
+  max-width: 100%;
+  height: auto;
+  flex-shrink: 0;
+}
+
+footer {
+  padding: 24px;
+  color: #6e6e73;
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 800px) {
+  main {
+    flex-direction: column;
+    gap: 40px;
+    padding-top: 64px;
+    text-align: center;
+  }
+
+  .actions {
+    justify-content: center;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f5f5f7;
+    background: #161617;
+  }
+
+  .eyebrow,
+  .description,
+  .compatibility,
+  footer {
+    color: #a1a1a6;
+  }
+
+  .secondary {
+    color: #66b1ff;
+  }
+
+  .secondary:hover {
+    background: #232e3a;
+  }
+}

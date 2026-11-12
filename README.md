@@ -5,7 +5,7 @@
 
 A lightweight, native macOS menu bar dashboard for Home Assistant.
 
-![HomeBar](assets/dashboard.png)
+![HomeBar](docs/dashboard.png)
 
 ## Features
 
