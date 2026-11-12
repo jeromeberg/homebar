@@ -18,6 +18,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Extract release notes
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+
+          version = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          notes = []
+          for section in re.split(r"^##[ \t]+", changelog, flags=re.MULTILINE)[1:]:
+              heading, _, body = section.partition("\n")
+              if re.fullmatch(r"\[" + re.escape(version) + r"\](?: - \d{4}-\d{2}-\d{2})?\s*", heading):
+                  notes.append(body.strip())
+          if len(notes) != 1 or not notes[0]:
+              raise SystemExit(f"Expected one non-empty CHANGELOG.md section for [{version}].")
+          Path("updates").mkdir(exist_ok=True)
+          Path("updates/HomeBar-macOS-arm64.md").write_text(notes[0] + "\n", encoding="utf-8")
+          PY
+
       - name: Validate update signing configuration
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
@@ -52,22 +72,30 @@ jobs:
               --ed-key-file - \
               --download-url-prefix "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/" \
               --link "https://github.com/$GITHUB_REPOSITORY/releases/tag/$GITHUB_REF_NAME" \
+              --embed-release-notes \
               --maximum-deltas 0 updates
           python3 - <<'PY'
+          from pathlib import Path
           import xml.etree.ElementTree as ET
           feed = ET.parse("updates/appcast.xml")
           enclosures = feed.findall("./channel/item/enclosure")
           signature = "{http://www.andymatuschak.org/xml-namespaces/sparkle}edSignature"
           if len(enclosures) != 1 or not enclosures[0].get(signature):
               raise SystemExit("Expected one signed update. Check that the Sparkle keys match.")
+          description = feed.find("./channel/item/description")
+          notes = Path("updates/HomeBar-macOS-arm64.md").read_text(encoding="utf-8").strip()
+          if description is None or (description.text or "").strip() != notes:
+              raise SystemExit("Expected changelog release notes embedded in the update feed.")
           PY
 
-      - name: Create draft release
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             updates/HomeBar-macOS-arm64.zip
             updates/appcast.xml
           fail_on_unmatched_files: true
-          draft: true
+          body_path: updates/HomeBar-macOS-arm64.md
+          draft: false
+          make_latest: "true"
           generate_release_notes: false
