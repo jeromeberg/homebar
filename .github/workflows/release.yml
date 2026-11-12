@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test
+        run: ./test.sh
+
+      - name: Build Release
+        run: ./build.sh
+
+      - name: Package application
+        run: |
+          APP=".build/HomeBar.app"
+          lipo "$APP/Contents/MacOS/HomeBar" -verify_arch arm64
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${GITHUB_REF_NAME#v}" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "$APP/Contents/Info.plist"
+          codesign --force --sign - "$APP"
+
+          ditto -c -k --keepParent \
+            "$APP" HomeBar-macOS-arm64.zip
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: HomeBar-macOS-arm64.zip
+          fail_on_unmatched_files: true
+          draft: true
+          generate_release_notes: false
