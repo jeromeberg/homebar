@@ -11,13 +11,15 @@ public final class EntityStore {
     private var devices: [String: HADevice] = [:]
     private var registry: [String: HARegistryEntity] = [:]
     private var states: [String: HAState] = [:]
+    private var localNames: [String: String]
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var server: String?
 
-    /** Restore the saved entity selection using the supplied preferences store. */
+    /** Restore saved selections and local names using the supplied preferences store. */
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         selectedIDs = defaults.stringArray(forKey: "selectedEntityIDs") ?? []
+        localNames = defaults.dictionary(forKey: "localEntityNames") as? [String: String] ?? [:]
         server = defaults.string(forKey: "selectedEntitiesServer")
     }
 
@@ -29,7 +31,7 @@ public final class EntityStore {
             let areaID = entry?.area_id ?? device?.area_id
             let area = areaID.flatMap { areas[$0] }
             return HAEntity(id: id,
-                name: entry?.name ?? state?.attributes.friendly_name ?? entry?.original_name
+                name: localNames[id] ?? entry?.name ?? state?.attributes.friendly_name ?? entry?.original_name
                     ?? id.split(separator: ".").last.map { $0.replacingOccurrences(of: "_", with: " ").capitalized } ?? id,
                 areaID: area?.area_id, room: area?.name ?? "Other",
                 state: state?.state ?? "unavailable", unit: state?.attributes.unit_of_measurement,
@@ -67,11 +69,33 @@ public final class EntityStore {
         defaults.set(selectedIDs, forKey: "selectedEntityIDs")
     }
 
-    /** Start a fresh discovery session and clear selections when the authenticated server changes. */
+    /** Save a local display name for an entity ID. An empty name restores the Home Assistant name. */
+    public func setLocalName(_ name: String, for id: String) {
+        guard Self.supports(id) else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        localNames[id] = trimmed.isEmpty ? nil : trimmed
+        defaults.set(localNames, forKey: "localEntityNames")
+    }
+
+    /** Move the selected IDs at the supplied offsets before the original destination offset and save the order. */
+    public func moveSelected(fromOffsets source: IndexSet, toOffset destination: Int) {
+        guard !source.isEmpty, source.allSatisfy({ selectedIDs.indices.contains($0) }),
+              (0...selectedIDs.count).contains(destination) else { return }
+        let moved = source.map { selectedIDs[$0] }
+        let insertion = destination - source.filter { $0 < destination }.count
+        var reordered = selectedIDs.enumerated().filter { !source.contains($0.offset) }.map(\.element)
+        reordered.insert(contentsOf: moved, at: insertion)
+        selectedIDs = reordered
+        defaults.set(selectedIDs, forKey: "selectedEntityIDs")
+    }
+
+    /** Start discovery and clear selections and local names when the authenticated server changes. */
     func begin(server: String) {
         if let previous = self.server, previous != server {
             selectedIDs = []
             defaults.set(selectedIDs, forKey: "selectedEntityIDs")
+            localNames = [:]
+            defaults.set(localNames, forKey: "localEntityNames")
         }
         self.server = server
         defaults.set(server, forKey: "selectedEntitiesServer")

@@ -8,6 +8,7 @@ let package = Package(
     targets: [
         .target(name: "HomeBarCore"),
         .executableTarget(name: "HomeBar", dependencies: ["HomeBarCore"]),
-        .testTarget(name: "HomeBarCoreTests", dependencies: ["HomeBarCore"])
+        .testTarget(name: "HomeBarCoreTests", dependencies: ["HomeBarCore"]),
+        .testTarget(name: "HomeBarTests", dependencies: ["HomeBar"])
     ]
 )

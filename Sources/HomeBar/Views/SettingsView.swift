@@ -8,6 +8,8 @@ struct SettingsView: View {
         TabView {
             EntityPickerView(store: connection.entities, connected: connection.state == .connected)
                 .tabItem { Label("Entities", systemImage: "checklist") }
+            CustomizeSettingsView(store: connection.entities)
+                .tabItem { Label("Customize", systemImage: "slider.horizontal.3") }
             VStack(alignment: .leading, spacing: 16) {
                 Text(connection.state.label).font(.headline)
                 if let detail = connection.detail {

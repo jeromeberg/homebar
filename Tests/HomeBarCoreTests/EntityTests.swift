@@ -66,6 +66,109 @@ struct EntityTests {
     }
 
     @Test
+    /** Persist local names without changing IDs or order, and retain them through live state updates. */
+    func localNamePersistence() throws {
+        let (store, defaults) = store()
+        store.begin(server: "http://home.local")
+        store.setSelected("light.desk", selected: true)
+        store.setSelected("switch.plug", selected: true)
+        try store.load(json(#"[{"entity_id":"light.desk","name":"Desk Lamp"}]"#), command: "config/entity_registry/list")
+        store.setLocalName("  Reading Lamp \n", for: "light.desk")
+        #expect(store.selectedIDs == ["light.desk", "switch.plug"])
+        #expect(store.selectedEntities.first?.name == "Reading Lamp")
+        #expect(store.groups(search: "reading", showHidden: false).flatMap(\.entities).map(\.id) == ["light.desk"])
+        try store.applyLegacy(["data": ["entity_id": "light.desk", "new_state": ["state": "on",
+            "attributes": ["friendly_name": "Updated HA Lamp"]]]])
+        #expect(store.selectedEntities.first?.name == "Reading Lamp")
+        #expect(store.selectedEntities.first?.state == "on")
+        let restored = EntityStore(defaults: defaults)
+        #expect(restored.selectedEntities.first?.id == "light.desk")
+        #expect(restored.selectedEntities.first?.name == "Reading Lamp")
+        store.setSelected("light.desk", selected: false)
+        store.setSelected("light.desk", selected: true)
+        #expect(store.selectedEntities.last?.name == "Reading Lamp")
+    }
+
+    @Test
+    /** Restore the latest Home Assistant name when a local name is cleared, including whitespace input. */
+    func resetLocalName() throws {
+        let (store, defaults) = store()
+        store.setSelected("light.desk", selected: true)
+        try store.load(json(#"[{"entity_id":"light.desk","name":"Desk Lamp"}]"#), command: "config/entity_registry/list")
+        store.setLocalName("Reading Lamp", for: "light.desk")
+        try store.load(json(#"[{"entity_id":"light.desk","name":"New HA Name"}]"#), command: "config/entity_registry/list")
+        store.setLocalName(" \n ", for: "light.desk")
+        #expect(store.selectedEntities.first?.name == "New HA Name")
+        store.setLocalName("Reading Lamp", for: "light.desk")
+        store.setLocalName("", for: "light.desk")
+        store.setLocalName("Unsupported", for: "climate.room")
+        #expect(store.selectedEntities.first?.name == "New HA Name")
+        #expect(defaults.dictionary(forKey: "localEntityNames")?.isEmpty == true)
+        let restored = EntityStore(defaults: defaults)
+        try restored.load(json(#"[{"entity_id":"light.desk","name":"New HA Name"}]"#), command: "config/entity_registry/list")
+        #expect(restored.selectedEntities.first?.name == "New HA Name")
+    }
+
+    @Test
+    /** Keep local names on reconnect and remove them when switching to another Home Assistant server. */
+    func localNamesFollowServer() {
+        let (store, defaults) = store()
+        store.begin(server: "http://home.local")
+        store.setSelected("light.desk", selected: true)
+        store.setLocalName("Reading Lamp", for: "light.desk")
+        store.disconnected()
+        store.begin(server: "http://home.local")
+        #expect(store.selectedEntities.first?.name == "Reading Lamp")
+        let restored = EntityStore(defaults: defaults)
+        restored.begin(server: "http://other.local")
+        restored.setSelected("light.desk", selected: true)
+        #expect(restored.selectedEntities.first?.name == "Desk")
+        #expect(EntityStore(defaults: defaults).selectedEntities.first?.name == "Desk")
+    }
+
+    @Test
+    /** Move selections both ways and in groups, keeping display order and saved preferences in sync. */
+    func reorderPersistence() {
+        let (store, defaults) = store()
+        let original = ["light.desk", "sensor.pm25", "switch.plug", "fan.bed"]
+        for id in original { store.setSelected(id, selected: true) }
+
+        store.moveSelected(fromOffsets: IndexSet(integer: 0), toOffset: 4)
+        #expect(store.selectedIDs == ["sensor.pm25", "switch.plug", "fan.bed", "light.desk"])
+        store.moveSelected(fromOffsets: IndexSet(integer: 3), toOffset: 0)
+        #expect(store.selectedIDs == original)
+        store.moveSelected(fromOffsets: IndexSet([0, 2]), toOffset: 4)
+        let expected = ["sensor.pm25", "fan.bed", "light.desk", "switch.plug"]
+        #expect(store.selectedIDs == expected)
+        #expect(store.selectedEntities.map(\.id) == expected)
+
+        let restored = EntityStore(defaults: defaults)
+        #expect(restored.selectedIDs == expected)
+        restored.disconnected()
+        restored.begin(server: "http://home.local")
+        #expect(restored.selectedEntities.map(\.id) == expected)
+        restored.setSelected("sensor.temperature", selected: true)
+        #expect(restored.selectedIDs == expected + ["sensor.temperature"])
+    }
+
+    @Test
+    /** Leave selection unchanged for adjacent drops, empty moves, and invalid offsets. */
+    func reorderNoOpAndInvalidOffsets() {
+        let (store, defaults) = store()
+        store.moveSelected(fromOffsets: IndexSet(integer: 0), toOffset: 0)
+        #expect(store.selectedIDs.isEmpty)
+        let original = ["light.desk", "switch.plug"]
+        for id in original { store.setSelected(id, selected: true) }
+        store.moveSelected(fromOffsets: IndexSet(integer: 0), toOffset: 1)
+        store.moveSelected(fromOffsets: IndexSet(), toOffset: 0)
+        store.moveSelected(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+        store.moveSelected(fromOffsets: IndexSet(integer: 0), toOffset: -1)
+        store.moveSelected(fromOffsets: IndexSet(integer: 0), toOffset: 3)
+        #expect(store.selectedIDs == original)
+        #expect(EntityStore(defaults: defaults).selectedIDs == original)
+    }
+
+    @Test
     /** Merge compressed additions, changed state/attributes, attribute removals, and entity removals. */
     func compressedUpdates() throws {
         let (store, _) = store()
