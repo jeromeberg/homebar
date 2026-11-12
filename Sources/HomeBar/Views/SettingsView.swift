@@ -25,6 +25,8 @@ struct SettingsView: View {
             .tabItem { Label("Connection", systemImage: "network") }
             GeneralSettingsView()
                 .tabItem { Label("General", systemImage: "gearshape") }
+            AboutSettingsView()
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(minWidth: 540, idealWidth: 580, minHeight: 440, idealHeight: 540)
     }
