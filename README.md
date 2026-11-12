@@ -3,7 +3,9 @@
 ![macOS](https://img.shields.io/badge/macOS-000000?style=flat&logo=apple&logoColor=F0F0F0)
 ![Swift](https://img.shields.io/badge/Swift-F54A2A?style=flat&logo=swift&logoColor=white)
 
-A native macOS menu bar app for controlling Home Assistant.
+A native macOS menu bar dashboard for Home Assistant.
+
+![HomeBar](assets/dashboard.png)
 
 ## Instructions
 
