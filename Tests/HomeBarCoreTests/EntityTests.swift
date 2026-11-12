@@ -35,13 +35,13 @@ struct EntityTests {
         #expect(entities["sensor.temperature"]?.room == "Other")
         #expect(entities["sensor.temperature"]?.stateLabel == "21.4°C")
         #expect(entities["sensor.temperature"]?.symbol == "thermometer.medium")
-        #expect(entities["switch.plug"] == nil)
-        #expect(entities["switch.other"] == nil)
+        #expect(entities["switch.plug"]?.state == "unavailable")
+        #expect(entities["switch.other"]?.state == "on")
         let visible = store.groups(search: "", showHidden: false).flatMap(\.entities)
-        #expect(Set(visible.map(\.id)) == ["light.desk", "fan.bed", "sensor.temperature"])
+        #expect(Set(visible.map(\.id)) == ["light.desk", "fan.bed", "sensor.temperature", "switch.plug", "switch.other"])
         #expect(store.groups(search: "", showHidden: false).last?.name == "Other")
         #expect(store.groups(search: "BEDROOM", showHidden: false).flatMap(\.entities).map(\.id) == ["fan.bed"])
-        #expect(store.groups(search: "", showHidden: true).flatMap(\.entities).count == 7)
+        #expect(store.groups(search: "", showHidden: true).flatMap(\.entities).count == 9)
     }
 
     @Test
@@ -54,13 +54,13 @@ struct EntityTests {
         store.setSelected("sensor.pm25", selected: true)
         store.setSelected("switch.plug", selected: true)
         let restored = EntityStore(defaults: defaults)
-        #expect(restored.selectedIDs == ["light.desk", "sensor.pm25"])
+        #expect(restored.selectedIDs == ["light.desk", "sensor.pm25", "switch.plug"])
         #expect(restored.selectedEntities.allSatisfy { $0.stateLabel == "Unavailable" })
-        #expect(restored.groups(search: "", showHidden: false).flatMap(\.entities).count == 2)
+        #expect(restored.groups(search: "", showHidden: false).flatMap(\.entities).count == 3)
         restored.begin(server: "http://home.local")
-        #expect(restored.selectedIDs.count == 2)
+        #expect(restored.selectedIDs.count == 3)
         restored.setSelected("light.desk", selected: false)
-        #expect(EntityStore(defaults: defaults).selectedIDs == ["sensor.pm25"])
+        #expect(EntityStore(defaults: defaults).selectedIDs == ["sensor.pm25", "switch.plug"])
         restored.begin(server: "http://different.local")
         #expect(restored.selectedIDs.isEmpty)
     }
@@ -110,9 +110,9 @@ struct EntityTests {
         #expect(socket.sentTypes.filter { $0 == "subscribe_entities" }.count == 1)
     }
 
-    @Test
-    /** Fall back only for an unsupported command, then receive legacy changes without polling. */
-    func legacyFallback() async throws {
+    @Test(arguments: ["fan.bed", "switch.plug"])
+    /** Fall back to legacy changes for the supplied entity ID without polling. */
+    func legacyFallback(entityID: String) async throws {
         let (store, _) = store()
         let socket = ScriptedSocket([])
         let discovery = EntityDiscovery(socket: socket, store: store)
@@ -126,9 +126,9 @@ struct EntityTests {
         try await discovery.receive(result(6, value: NSNull()))
         #expect(socket.sentTypes.last == "get_states")
         try await discovery.receive(result(7, value: []))
-        try await discovery.receive(Data(#"{"id":6,"type":"event","event":{"data":{"entity_id":"fan.bed","new_state":{"state":"unknown","attributes":{"friendly_name":"Fan"}}}}}"#.utf8))
+        try await discovery.receive(Data(#"{"id":6,"type":"event","event":{"data":{"entity_id":"\#(entityID)","new_state":{"state":"unknown","attributes":{"friendly_name":"Fan"}}}}}"#.utf8))
         #expect(store.entities.first?.stateLabel == "Unknown")
-        try await discovery.receive(Data(#"{"id":6,"type":"event","event":{"data":{"entity_id":"fan.bed","new_state":null}}}"#.utf8))
+        try await discovery.receive(Data(#"{"id":6,"type":"event","event":{"data":{"entity_id":"\#(entityID)","new_state":null}}}"#.utf8))
         #expect(store.entities.isEmpty)
         #expect(store.isLive)
     }
@@ -183,20 +183,20 @@ struct EntityTests {
         Issue.record("Expected entity state was not reached")
     }
 
-    @Test
-    /** Exercise authentication, discovery, live updates, and reconnect together through the existing client. */
-    func connectionIntegration() async throws {
+    @Test(arguments: ["light.desk", "switch.plug"])
+    /** Exercise discovery, live state, service calls, and reconnect for the supplied entity ID. */
+    func connectionIntegration(entityID: String) async throws {
         let (store, defaults) = store()
-        store.setSelected("light.desk", selected: true)
+        store.setSelected(entityID, selected: true)
         let frames = [
             #"{"type":"auth_required"}"#,
             #"{"type":"auth_ok","ha_version":"2026.11"}"#,
             #"{"id":1,"type":"result","success":true,"result":[]}"#,
             #"{"id":2,"type":"result","success":true,"result":[]}"#,
-            #"{"id":3,"type":"result","success":true,"result":[{"entity_id":"light.desk","name":"Desk Lamp"}]}"#,
+            #"{"id":3,"type":"result","success":true,"result":[{"entity_id":"\#(entityID)","name":"Desk Lamp"}]}"#,
             #"{"id":4,"type":"result","success":true,"result":[]}"#,
             #"{"id":5,"type":"result","success":true,"result":null}"#,
-            #"{"id":5,"type":"event","event":{"a":{"light.desk":{"s":"on","a":{}}}}}"#
+            #"{"id":5,"type":"event","event":{"a":{"\#(entityID)":{"s":"on","a":{}}}}}"#
         ]
         let first = ScriptedSocket(frames)
         let second = ScriptedSocket(frames)
@@ -214,7 +214,7 @@ struct EntityTests {
         #expect(model.entities.isLive)
         #expect(connections == 1)
         #expect(first.sentTypes == ["auth", "config/area_registry/list", "config/device_registry/list", "config/entity_registry/list", "get_states", "subscribe_entities"])
-        first.push(#"{"id":5,"type":"event","event":{"c":{"light.desk":{"+":{"s":"off"}}}}}"#)
+        first.push(#"{"id":5,"type":"event","event":{"c":{"\#(entityID)":{"+":{"s":"off"}}}}}"#)
         try await wait { model.entities.selectedEntities.first?.stateLabel == "Off" }
         first.close()
         try await wait { model.state == .reconnecting }
@@ -223,15 +223,22 @@ struct EntityTests {
         try await wait { model.entities.isLive && model.entities.selectedEntities.first?.stateLabel == "On" }
         #expect(connections == 2)
         #expect(second.sentTypes.filter { $0 == "subscribe_entities" }.count == 1)
-        let control = Task { try await model.control("light.desk", command: .power(false)) }
+        let control = Task { try await model.control(entityID, command: .power(false)) }
         try await wait { second.sentTypes.last == "call_service" }
+        let request = try #require(JSONSerialization.jsonObject(with: second.sent.last!) as? [String: Any])
+        #expect(request["domain"] as? String == String(entityID.prefix(while: { $0 != "." })))
+        #expect(request["service"] as? String == "turn_off")
+        #expect(request["target"] as? [String: String] == ["entity_id": entityID])
         #expect(model.entities.selectedEntities.first?.state == "on")
         second.push(#"{"id":6,"type":"result","success":true,"result":null}"#)
         try await control.value
         #expect(model.entities.selectedEntities.first?.state == "on")
-        second.push(#"{"id":5,"type":"event","event":{"c":{"light.desk":{"+":{"s":"off"}}}}}"#)
+        second.push(#"{"id":5,"type":"event","event":{"c":{"\#(entityID)":{"+":{"s":"off"}}}}}"#)
         try await wait { model.entities.selectedEntities.first?.state == "off" }
         #expect(connections == 2)
+        second.push(#"{"id":5,"type":"event","event":{"c":{"\#(entityID)":{"+":{"s":"unavailable"}}}}}"#)
+        try await wait { model.entities.selectedEntities.first?.isAvailable == false }
+        await #expect(throws: ServiceCallError.unavailable) { try await model.control(entityID, command: .power(true)) }
         model.disconnect()
         #expect(model.entities.selectedEntities.first?.stateLabel == "Unavailable")
         #expect(!model.entities.isLive)

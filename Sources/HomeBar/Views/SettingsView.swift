@@ -21,6 +21,8 @@ struct SettingsView: View {
             }
             .padding(24)
             .tabItem { Label("Connection", systemImage: "network") }
+            GeneralSettingsView()
+                .tabItem { Label("General", systemImage: "gearshape") }
         }
         .frame(minWidth: 540, idealWidth: 580, minHeight: 440, idealHeight: 540)
     }

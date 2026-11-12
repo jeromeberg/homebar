@@ -10,7 +10,7 @@ struct DeviceControlView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             DeviceHeaderView(entity: entity, isExpanded: $isExpanded, send: send)
-            if isExpanded {
+            if isExpanded && entity.domain != "switch" {
                 Group {
                     if entity.domain == "light" {
                         LightControlView(entity: entity, send: send)
@@ -48,31 +48,26 @@ struct DeviceHeaderView: View {
     @State private var pending = false
 
     private var canToggle: Bool {
-        entity.domain == "light" || (entity.attributes.supported_features ?? 0) & (entity.state == "on" ? 16 : 32) != 0
+        ["light", "switch"].contains(entity.domain) || (entity.attributes.supported_features ?? 0) & (entity.state == "on" ? 16 : 32) != 0
     }
 
     var body: some View {
         HStack(spacing: 10) {
-            Button {
-                withAnimation(reduceMotion ? nil : .smooth(duration: 0.2)) {
-                    isExpanded.toggle()
+            if entity.domain == "switch" {
+                label
+            } else {
+                Button {
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.2)) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    label
                 }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: entity.symbol).foregroundStyle(.secondary).frame(width: 20)
-                    Text(entity.name).lineLimit(2)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                }
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityLabel(entity.name)
+                .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+                .accessibilityHint(isExpanded ? "Hide controls" : "Show controls")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(entity.name)
-            .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-            .accessibilityHint(isExpanded ? "Hide controls" : "Show controls")
             if !entity.isAvailable { Text(entity.stateLabel).foregroundStyle(.secondary) }
             Toggle(entity.stateLabel, isOn: Binding(
                 get: { entity.state == "on" },
@@ -91,6 +86,21 @@ struct DeviceHeaderView: View {
             .accessibilityLabel(entity.name)
         }
         .font(.subheadline)
+    }
+
+    private var label: some View {
+        HStack(spacing: 10) {
+            Image(systemName: entity.symbol).foregroundStyle(.secondary).frame(width: 20)
+            Text(entity.name).lineLimit(2)
+            Spacer(minLength: 0)
+            if entity.domain != "switch" {
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+        }
+        .contentShape(Rectangle())
     }
 }
 

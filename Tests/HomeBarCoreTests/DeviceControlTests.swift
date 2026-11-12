@@ -51,6 +51,30 @@ struct DeviceControlTests {
     }
 
     @Test
+    /** Check switch symbols, power requests, availability, and rejection of expanded controls. */
+    func switchCommands() throws {
+        let outlet = try entity("switch.plug", attributes: ["device_class": "outlet"])
+        #expect(outlet.symbol == "powerplug")
+        #expect(try entity("switch.generic", attributes: [:]).symbol == "switch.2")
+        for on in [true, false] {
+            let message = try DeviceCommand.power(on).message(for: outlet)
+            #expect(message["type"] as? String == "call_service")
+            #expect(message["domain"] as? String == "switch")
+            #expect(message["service"] as? String == (on ? "turn_on" : "turn_off"))
+            #expect(message["target"] as? [String: String] == ["entity_id": "switch.plug"])
+            #expect((message["service_data"] as? [String: String])?.isEmpty == true)
+        }
+        for state in ["unavailable", "unknown"] {
+            let unavailable = try entity("switch.plug", attributes: [:], state: state)
+            #expect(!unavailable.isAvailable)
+            #expect(throws: ServiceCallError.unavailable) { try DeviceCommand.power(true).message(for: unavailable) }
+        }
+        for command in [DeviceCommand.brightness(50), .temperature(3000), .percentage(50), .preset("Auto")] {
+            #expect(throws: ServiceCallError.unsupported) { try command.message(for: outlet) }
+        }
+    }
+
+    @Test
     /** Hide unsupported controls and require a valid reported Kelvin range. */
     func capabilities() throws {
         let basic = try entity(attributes: ["supported_color_modes": ["onoff"]])

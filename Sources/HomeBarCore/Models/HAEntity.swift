@@ -80,6 +80,7 @@ public struct HAEntity: Identifiable, Equatable {
         switch domain {
         case "light": "lightbulb"
         case "fan": "fan"
+        case "switch": deviceClass == "outlet" ? "powerplug" : "switch.2"
         default:
             switch deviceClass {
             case "temperature": "thermometer.medium"

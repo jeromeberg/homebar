@@ -13,7 +13,7 @@ public enum DeviceCommand: Equatable, Sendable {
         var service: String
         var data: [String: Any] = [:]
         switch self {
-        case .power(let on) where ["light", "fan"].contains(entity.domain):
+        case .power(let on) where ["light", "fan", "switch"].contains(entity.domain):
             if entity.domain == "fan" {
                 let flag = on ? 32 : 16
                 guard (entity.attributes.supported_features ?? 0) & flag != 0 else { throw ServiceCallError.unsupported }
