@@ -5,13 +5,20 @@ struct DeviceControlView: View {
     let entity: HAEntity
     let connection: ConnectionViewModel
     @State private var error: String?
+    @State private var isExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if entity.domain == "light" {
-                LightControlView(entity: entity, send: send)
-            } else {
-                FanControlView(entity: entity, send: send)
+            DeviceHeaderView(entity: entity, isExpanded: $isExpanded, send: send)
+            if isExpanded {
+                Group {
+                    if entity.domain == "light" {
+                        LightControlView(entity: entity, send: send)
+                    } else {
+                        FanControlView(entity: entity, send: send)
+                    }
+                }
+                .padding(.leading, 30)
             }
             if let error {
                 Text(error).font(.caption).foregroundStyle(.secondary)
@@ -35,7 +42,9 @@ struct DeviceControlView: View {
 
 struct DeviceHeaderView: View {
     let entity: HAEntity
+    @Binding var isExpanded: Bool
     let send: (DeviceCommand) async -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pending = false
 
     private var canToggle: Bool {
@@ -44,9 +53,26 @@ struct DeviceHeaderView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: entity.symbol).foregroundStyle(.secondary).frame(width: 20)
-            Text(entity.name).lineLimit(2)
-            Spacer(minLength: 8)
+            Button {
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: entity.symbol).foregroundStyle(.secondary).frame(width: 20)
+                    Text(entity.name).lineLimit(2)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(entity.name)
+            .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+            .accessibilityHint(isExpanded ? "Hide controls" : "Show controls")
             if !entity.isAvailable { Text(entity.stateLabel).foregroundStyle(.secondary) }
             Toggle(entity.stateLabel, isOn: Binding(
                 get: { entity.state == "on" },
@@ -90,7 +116,7 @@ struct ControlSliderView: View {
                     .monospacedDigit().foregroundStyle(.secondary)
             }
             .font(.caption)
-            Slider(value: Binding(get: { displayedValue }, set: { draft = $0; revision += 1 }), in: range, step: 1) { active in
+            Slider(value: Binding(get: { displayedValue }, set: { draft = $0.rounded(); revision += 1 }), in: range) { active in
                 editing = active
                 if !active, draft != nil { revision += 1 }
             }
