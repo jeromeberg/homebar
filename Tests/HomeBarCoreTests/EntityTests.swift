@@ -223,6 +223,15 @@ struct EntityTests {
         try await wait { model.entities.isLive && model.entities.selectedEntities.first?.stateLabel == "On" }
         #expect(connections == 2)
         #expect(second.sentTypes.filter { $0 == "subscribe_entities" }.count == 1)
+        let control = Task { try await model.control("light.desk", command: .power(false)) }
+        try await wait { second.sentTypes.last == "call_service" }
+        #expect(model.entities.selectedEntities.first?.state == "on")
+        second.push(#"{"id":6,"type":"result","success":true,"result":null}"#)
+        try await control.value
+        #expect(model.entities.selectedEntities.first?.state == "on")
+        second.push(#"{"id":5,"type":"event","event":{"c":{"light.desk":{"+":{"s":"off"}}}}}"#)
+        try await wait { model.entities.selectedEntities.first?.state == "off" }
+        #expect(connections == 2)
         model.disconnect()
         #expect(model.entities.selectedEntities.first?.stateLabel == "Unavailable")
         #expect(!model.entities.isLive)

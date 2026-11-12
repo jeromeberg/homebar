@@ -35,7 +35,8 @@ public final class EntityStore {
                 state: state?.state ?? "unavailable", unit: state?.attributes.unit_of_measurement,
                 deviceClass: state?.attributes.device_class,
                 isHidden: entry?.disabled_by != nil || entry?.hidden_by != nil
-                    || entry?.entity_category == "diagnostic" || device?.disabled_by != nil)
+                    || entry?.entity_category == "diagnostic" || device?.disabled_by != nil,
+                attributes: state?.attributes ?? EntityAttributes())
         }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
@@ -143,7 +144,7 @@ public final class EntityStore {
         } else { states.removeValue(forKey: id) }
     }
 
-    /** Check whether an entity belongs to a Phase 2 domain. */
+    /** Check whether an entity belongs to a supported domain. */
     private static func supports(_ id: String) -> Bool {
         ["light", "fan", "sensor"].contains(String(id.prefix(while: { $0 != "." })))
     }

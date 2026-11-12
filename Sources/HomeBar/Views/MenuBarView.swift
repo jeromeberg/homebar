@@ -49,13 +49,20 @@ struct MenuBarView: View {
                     Button("Choose Entities…", action: openSettings)
                 } else {
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 8) {
                             ForEach(connection.entities.selectedEntities) { entity in
-                                EntityRowView(entity: entity)
+                                if entity.domain == "sensor" { EntityRowView(entity: entity) }
+                                else { DeviceControlView(entity: entity, connection: connection) }
+                                Divider()
                             }
                         }
                     }
-                    .frame(height: min(CGFloat(connection.entities.selectedEntities.count) * 48, 320))
+                    .frame(height: min(connection.entities.selectedEntities.reduce(CGFloat(0)) { height, entity in
+                        height + (entity.domain == "sensor" ? 40 : 52)
+                            + (entity.attributes.supportsBrightness || entity.attributes.supportsFanSpeed ? 48 : 0)
+                            + (entity.attributes.temperatureRange != nil ? 48 : 0)
+                            + (!entity.attributes.fanPresets.isEmpty ? 32 : 0)
+                    }, 320))
                 }
             } else {
                 ConnectionSettingsView(connection: connection)

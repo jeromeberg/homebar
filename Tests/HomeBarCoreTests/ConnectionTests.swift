@@ -24,6 +24,7 @@ final class ScriptedSocket: WebSocketTransport {
     var messages: [String]
     var sent: [Data] = []
     var closed = false
+    var failSends = false
     var pending: CheckedContinuation<Data, any Error>?
 
     var sentTypes: [String] {
@@ -41,7 +42,10 @@ final class ScriptedSocket: WebSocketTransport {
     }
 
     /** Record a client frame without printing credentials. */
-    func send(_ data: Data) async throws { sent.append(data) }
+    func send(_ data: Data) async throws {
+        if failSends { throw URLError(.networkConnectionLost) }
+        sent.append(data)
+    }
 
     /** Simulate a healthy WebSocket ping. */
     func ping() async throws {}

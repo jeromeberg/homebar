@@ -75,6 +75,13 @@ public final class ConnectionViewModel {
         tokenInput = ""
     }
 
+    /** Apply a command using current capabilities without changing the authoritative entity state. */
+    public func control(_ id: String, command: DeviceCommand) async throws {
+        guard state == .connected, entities.isLive, let client,
+              let entity = entities.entities.first(where: { $0.id == id }) else { throw ServiceCallError.unavailable }
+        try await client.callService(command, entity: entity)
+    }
+
     /** Retry immediately after wake or network recovery when an automatic retry is already pending. */
     public func recover() {
         guard retryAllowed, state == .reconnecting, let (address, token) = activeCredentials else { return }

@@ -38,7 +38,7 @@ final class URLSessionTransport: WebSocketTransport {
         }
     }
 
-    /** Send a JSON authentication message as a text frame. */
+    /** Send a JSON message as a text frame. */
     func send(_ data: Data) async throws {
         try await socket.send(.string(String(decoding: data, as: UTF8.self)))
     }
@@ -66,10 +66,16 @@ public final class HomeAssistantClient {
     private let factory: (URL) -> any WebSocketTransport
     private let handshakeTimeout: Duration
     private let heartbeatInterval: Duration
+    private let serviceTimeout: Duration
+    private var nextID = 1
+    private var ready = false
+    private var pending: [Int: CheckedContinuation<Void, any Error>] = [:]
+    private var deadlines: [Int: Task<Void, Never>] = [:]
 
     /** Configure a client with optional test transport and lifecycle timing. */
     public init(handshakeTimeout: Duration = .seconds(20), heartbeatInterval: Duration = .seconds(30),
-                factory: ((URL) -> any WebSocketTransport)? = nil) {
+                serviceTimeout: Duration = .seconds(20), factory: ((URL) -> any WebSocketTransport)? = nil) {
+        self.serviceTimeout = serviceTimeout
         self.handshakeTimeout = handshakeTimeout
         self.heartbeatInterval = heartbeatInterval
         self.factory = factory ?? { URLSessionTransport(url: $0) }
@@ -79,7 +85,7 @@ public final class HomeAssistantClient {
     public func run(address: ServerAddress, token: String, entities: EntityStore? = nil, authenticated: (String?) throws -> Void) async throws {
         let socket = factory(address.webSocketURL)
         transport = socket
-        defer { socket.close(); transport = nil }
+        defer { ready = false; failPending(); socket.close(); transport = nil }
         var timedOut = false
         let watchdog = Task { @MainActor in
             try await Task.sleep(for: handshakeTimeout)
@@ -96,6 +102,8 @@ public final class HomeAssistantClient {
         }
         watchdog.cancel()
         try Task.checkCancellation()
+        ready = true
+        nextID = 1
         try authenticated(version)
         let heartbeat = Task { @MainActor in
             while !Task.isCancelled {
@@ -109,20 +117,75 @@ public final class HomeAssistantClient {
             }
         }
         defer { heartbeat.cancel() }
-        let discovery = entities.map { EntityDiscovery(socket: socket, store: $0) }
+        let discovery = entities.map { EntityDiscovery(socket: socket, store: $0, allocateID: { self.messageID() }) }
         defer { discovery?.close(); entities?.disconnected() }
         if let entities { entities.begin(server: address.baseURL.absoluteString) }
         try await discovery?.start()
         while !Task.isCancelled {
             let data = try await socket.receive()
             try Task.checkCancellation()
-            try await discovery?.receive(data)
+            if !receiveServiceResult(data) { try await discovery?.receive(data) }
         }
         throw CancellationError()
     }
 
     /** Stop all pending I/O so an explicit disconnect completes immediately. */
-    public func disconnect() { transport?.close() }
+    public func disconnect() { ready = false; failPending(); transport?.close() }
+
+    /** Send a device command over the authenticated connection and await its matching result. */
+    public func callService(_ command: DeviceCommand, entity: HAEntity) async throws {
+        guard ready, let socket = transport else { throw ServiceCallError.unavailable }
+        try Task.checkCancellation()
+        let id = messageID()
+        var message = try command.message(for: entity)
+        message["id"] = id
+        let data = try JSONSerialization.data(withJSONObject: message)
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                pending[id] = continuation
+                deadlines[id] = Task { @MainActor [weak self] in
+                    do { try await Task.sleep(for: self?.serviceTimeout ?? .seconds(20)) }
+                    catch { return }
+                    self?.complete(id, error: ServiceCallError.timeout)
+                }
+                Task { @MainActor [weak self] in
+                    guard self?.pending[id] != nil else { return }
+                    do { try await socket.send(data) }
+                    catch { self?.complete(id, error: ServiceCallError.unavailable) }
+                }
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in self?.complete(id, error: CancellationError()) }
+        }
+    }
+
+    /** Allocate one ID shared by discovery, subscriptions, and service requests. */
+    private func messageID() -> Int {
+        defer { nextID += 1 }
+        return nextID
+    }
+
+    /** Consume only service results, leaving discovery and live events on their existing path. */
+    private func receiveServiceResult(_ data: Data) -> Bool {
+        guard let message = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              message["type"] as? String == "result", let id = message["id"] as? Int,
+              pending[id] != nil else { return false }
+        complete(id, error: message["success"] as? Bool == true ? nil : ServiceCallError.rejected)
+        return true
+    }
+
+    /** Complete a request once and cancel its response deadline without exposing server error text. */
+    private func complete(_ id: Int, error: (any Error)?) {
+        deadlines.removeValue(forKey: id)?.cancel()
+        guard let continuation = pending.removeValue(forKey: id) else { return }
+        if let error { continuation.resume(throwing: error) }
+        else { continuation.resume() }
+    }
+
+    /** Release all service callers when this connection ends. */
+    private func failPending() {
+        for id in Array(pending.keys) { complete(id, error: ServiceCallError.unavailable) }
+    }
 
     /** Perform the two-message official handshake and return the authenticated server version. */
     private func authenticate(_ socket: any WebSocketTransport, token: String) async throws -> String? {

@@ -6,6 +6,7 @@ final class EntityDiscovery {
     private let store: EntityStore
     private let timeout: Duration
     private var nextID = 1
+    private let allocateID: (() -> Int)?
     private var pending: [Int: String] = [:]
     private var deadlines: [Int: Task<Void, Never>] = [:]
     private var subscriptionID: Int?
@@ -14,10 +15,11 @@ final class EntityDiscovery {
     private var live = false
 
     /** Bind discovery to the already authenticated socket and its observable store. */
-    init(socket: any WebSocketTransport, store: EntityStore, timeout: Duration = .seconds(20)) {
+    init(socket: any WebSocketTransport, store: EntityStore, timeout: Duration = .seconds(20), allocateID: (() -> Int)? = nil) {
         self.socket = socket
         self.store = store
         self.timeout = timeout
+        self.allocateID = allocateID
     }
 
     /** Fetch each registry and the current state snapshot once per authenticated connection. */
@@ -74,7 +76,7 @@ final class EntityDiscovery {
 
     /** Send a uniquely numbered read command and give its result a bounded deadline. */
     private func send(_ command: String) async throws {
-        let id = nextID
+        let id = allocateID?() ?? nextID
         nextID += 1
         pending[id] = command
         var message: [String: Any] = ["id": id, "type": command]

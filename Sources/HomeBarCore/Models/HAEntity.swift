@@ -25,13 +25,7 @@ struct HARegistryEntity: Decodable {
 struct HAState: Decodable {
     let entity_id: String
     var state: String
-    var attributes: Attributes
-
-    struct Attributes: Decodable {
-        var friendly_name: String?
-        var unit_of_measurement: String?
-        var device_class: String?
-    }
+    var attributes: EntityAttributes
 
     /** Create a state from a normal state object or compressed subscription addition. */
     init(id: String, payload: [String: Any], compressed: Bool) throws {
@@ -41,27 +35,19 @@ struct HAState: Decodable {
         }
         entity_id = id
         state = value
-        self.attributes = try JSONDecoder().decode(Attributes.self, from: JSONSerialization.data(withJSONObject: attributes))
+        self.attributes = try JSONDecoder().decode(EntityAttributes.self, from: JSONSerialization.data(withJSONObject: attributes))
     }
 
     /** Merge changed state fields and attribute additions/removals from a compressed diff. */
     mutating func apply(_ diff: [String: Any]) {
         let additions = diff["+"] as? [String: Any] ?? [:]
         if let value = additions["s"] as? String { state = value }
-        if let attributes = additions["a"] as? [String: Any] {
-            if attributes.keys.contains("friendly_name") { self.attributes.friendly_name = attributes["friendly_name"] as? String }
-            if attributes.keys.contains("unit_of_measurement") { self.attributes.unit_of_measurement = attributes["unit_of_measurement"] as? String }
-            if attributes.keys.contains("device_class") { self.attributes.device_class = attributes["device_class"] as? String }
-        }
-        let removals = (diff["-"] as? [String: Any])?["a"] as? [String] ?? []
-        for key in removals {
-            switch key {
-            case "friendly_name": attributes.friendly_name = nil
-            case "unit_of_measurement": attributes.unit_of_measurement = nil
-            case "device_class": attributes.device_class = nil
-            default: break
-            }
-        }
+        guard let data = try? JSONEncoder().encode(attributes),
+              var merged = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        for (key, value) in additions["a"] as? [String: Any] ?? [:] { merged[key] = value }
+        for key in (diff["-"] as? [String: Any])?["a"] as? [String] ?? [] { merged.removeValue(forKey: key) }
+        if let data = try? JSONSerialization.data(withJSONObject: merged),
+           let updated = try? JSONDecoder().decode(EntityAttributes.self, from: data) { attributes = updated }
     }
 }
 
@@ -75,6 +61,9 @@ public struct HAEntity: Identifiable, Equatable {
     public let deviceClass: String?
     public let isHidden: Bool
 
+    public let attributes: EntityAttributes
+
+    public var isAvailable: Bool { state == "on" || state == "off" }
     public var domain: String { String(id.prefix(while: { $0 != "." })) }
 
     public var stateLabel: String {
@@ -106,4 +95,34 @@ public struct EntityGroup: Identifiable {
     public let id: String
     public let name: String
     public let entities: [HAEntity]
+}
+
+public struct EntityAttributes: Codable, Equatable, Sendable {
+    public var friendly_name: String?
+    public var unit_of_measurement: String?
+    public var device_class: String?
+    public var supported_color_modes: [String]?
+    public var brightness: Double?
+    public var color_temp_kelvin: Double?
+    public var min_color_temp_kelvin: Double?
+    public var max_color_temp_kelvin: Double?
+    public var supported_features: Int?
+    public var percentage: Double?
+    public var preset_modes: [String]?
+    public var preset_mode: String?
+
+    public var supportsBrightness: Bool {
+        (supported_color_modes ?? []).contains { ["brightness", "color_temp", "hs", "xy", "rgb", "rgbw", "rgbww"].contains($0) }
+    }
+
+    public var temperatureRange: ClosedRange<Double>? {
+        guard supported_color_modes?.contains("color_temp") == true,
+              let minimum = min_color_temp_kelvin, let maximum = max_color_temp_kelvin,
+              minimum.isFinite, maximum.isFinite, minimum > 0, maximum > minimum else { return nil }
+        return minimum...maximum
+    }
+
+    public var supportsFanSpeed: Bool { (supported_features ?? 0) & 1 != 0 }
+    public var fanPresets: [String] { (supported_features ?? 0) & 8 != 0 ? preset_modes ?? [] : [] }
+    public var brightnessPercent: Double? { brightness.map { min(100, max(0, $0 / 255 * 100)) } }
 }
