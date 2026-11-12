@@ -1,8 +1,10 @@
 import HomeBarCore
+import Sparkle
 import SwiftUI
 
 struct SettingsView: View {
     @Bindable var connection: ConnectionViewModel
+    let updater: SPUUpdater
 
     var body: some View {
         TabView {
@@ -23,7 +25,7 @@ struct SettingsView: View {
             }
             .padding(24)
             .tabItem { Label("Connection", systemImage: "network") }
-            GeneralSettingsView()
+            GeneralSettingsView(updater: updater)
                 .tabItem { Label("General", systemImage: "gearshape") }
             AboutSettingsView()
                 .tabItem { Label("About", systemImage: "info.circle") }

@@ -1,7 +1,9 @@
 import ServiceManagement
+import Sparkle
 import SwiftUI
 
 struct GeneralSettingsView: View {
+    let updater: SPUUpdater
     @Environment(\.scenePhase) private var scenePhase
     @State private var status = SMAppService.mainApp.status
     @State private var error: String?
@@ -26,6 +28,9 @@ struct GeneralSettingsView: View {
                 Text(error)
                     .font(.callout)
                     .foregroundStyle(.red)
+            }
+            Section("Updates") {
+                UpdateSettingsView(updater: updater)
             }
         }
         .formStyle(.grouped)
