@@ -3,9 +3,29 @@
 ![macOS](https://img.shields.io/badge/macOS-000000?style=flat&logo=apple&logoColor=F0F0F0)
 ![Swift](https://img.shields.io/badge/Swift-F54A2A?style=flat&logo=swift&logoColor=white)
 
-A native macOS menu bar dashboard for Home Assistant.
+A lightweight, native macOS menu bar dashboard for Home Assistant.
 
 ![HomeBar](assets/dashboard.png)
+
+## Installation
+
+Download the latest version from [releases](https://github.com/jeromeberg/homebar/releases/latest) page.
+
+**Note**: The application is unsigned and not notarized by Apple so macOS may block it.
+
+To allow HomeBar to run (you only need to do this once):
+
+1. Try opening HomeBar.app normally.
+2. Open System **Settings** → **Privacy & Security**.
+3. Scroll down to **Security** and click **Open Anyway**.
+4. Confirm by clicking **Open Anyway** again and entering your password if prompted.
+
+## Connect to Home Assistant 
+
+1. Open Home Assistant and go to your profile → **Security**.
+2. Under **Long-lived access tokens**, create a token and copy it (it will only be shown once).
+3. Open HomeBar and enter your Home Assistant server URL.
+4. Paste the token into Access Token and click Connect.
 
 ## Instructions
 
@@ -17,10 +37,10 @@ A native macOS menu bar dashboard for Home Assistant.
 ### Build and run
 
 ```sh
-# build
+# Build
 ./build.sh
 
-# run
+# Run
 open .build/HomeBar.app
 ```
 
@@ -29,13 +49,6 @@ open .build/HomeBar.app
 ```sh
 ./test.sh
 ```
-
-## Connect to Home Assistant
-
-1. Open Home Assistant and navigate to your profile → **Security**.
-2. Under **Long-lived access tokens**, create a token and copy it (it will only be shown once).
-3. Open HomeBar and enter your Home Assistant server URL.
-4. Paste the token into Access Token and click Connect.
 
 ## Resources
 
