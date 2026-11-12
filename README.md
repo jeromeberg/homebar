@@ -7,18 +7,18 @@ A lightweight, native macOS menu bar dashboard for Home Assistant.
 
 ![HomeBar](assets/dashboard.png)
 
+## Features
+
+- Lightweight
+- Customizable: select, reorder and rename entities
+- Support for lights, fans, plugs, and sensors
+- Secure token storage in Keychain
+- Native UI
+
+
 ## Installation
 
 Download the latest version from [releases](https://github.com/jeromeberg/homebar/releases/latest) page.
-
-**Note**: The application is unsigned and not notarized by Apple so macOS may block it.
-
-To allow HomeBar to run (you only need to do this once):
-
-1. Try opening HomeBar.app normally.
-2. Open System **Settings** → **Privacy & Security**.
-3. Scroll down to **Security** and click **Open Anyway**.
-4. Confirm by clicking **Open Anyway** again and entering your password if prompted.
 
 ## Connect to Home Assistant 
 
