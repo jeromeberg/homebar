@@ -4,6 +4,7 @@ import SwiftUI
 struct ConnectionSettingsView: View {
     @Bindable var connection: ConnectionViewModel
     @State private var discovery = ServerDiscovery()
+    @State private var showingTokenHelp = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -34,7 +35,30 @@ struct ConnectionSettingsView: View {
                     .textContentType(.URL)
             }
             VStack(alignment: .leading, spacing: 5) {
-                Text("Access Token").font(.caption)
+                HStack(spacing: 5) {
+                    Text("Access Token").font(.caption)
+                    Button {
+                        showingTokenHelp = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("How to get an access token")
+                    .help("How to get an access token")
+                    .popover(isPresented: $showingTokenHelp) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Create an Access Token").font(.headline)
+                            Text("1. Open Home Assistant → your profile → Security.")
+                            Text("2. Under Long-lived access tokens, create a new token.")
+                            Text("3. Copy it and paste it here. The token is shown only once.")
+                            Link("View full instructions", destination: URL(string: "https://github.com/jeromeberg/homebar/#connect-to-home-assistant")!)
+                        }
+                        .font(.callout)
+                        .padding(16)
+                        .frame(width: 300, alignment: .leading)
+                    }
+                }
                 SecureField(connection.hasSavedToken ? "Saved in Keychain — leave blank to reuse" : "Long-Lived Access Token",
                             text: $connection.tokenInput)
                 if connection.hasSavedToken {
