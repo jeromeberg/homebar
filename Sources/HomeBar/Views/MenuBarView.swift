@@ -5,6 +5,7 @@ import SwiftUI
 struct MenuBarView: View {
     @Bindable var connection: ConnectionViewModel
     @Environment(\.openSettings) private var showSettings
+    @AppStorage("menuMaxHeight") private var menuMaxHeight = 400.0
     @State private var entityListHeight: CGFloat = 1
 
     private var connectionColor: Color {
@@ -74,7 +75,7 @@ struct MenuBarView: View {
                         entityListHeight = height
                     }
                 }
-                .frame(height: min(entityListHeight, 400))
+                .frame(height: min(entityListHeight, CGFloat(menuMaxHeight)))
             } else {
                 ConnectionSettingsView(connection: connection)
                     .padding(18)
