@@ -63,8 +63,11 @@ public struct HAEntity: Identifiable, Equatable {
 
     public let attributes: EntityAttributes
 
-    public var isAvailable: Bool { state == "on" || state == "off" }
+    public var isAvailable: Bool {
+        domain == "climate" ? !["unknown", "unavailable"].contains(state) : state == "on" || state == "off"
+    }
     public var domain: String { String(id.prefix(while: { $0 != "." })) }
+    public var isHeating: Bool { domain == "climate" && isAvailable && state != "off" && attributes.hvac_action == "heating" }
 
     public var stateLabel: String {
         switch state {
@@ -80,6 +83,7 @@ public struct HAEntity: Identifiable, Equatable {
         switch domain {
         case "light": "lightbulb"
         case "fan": "fan"
+        case "climate": "thermometer.medium"
         case "switch": deviceClass == "outlet" ? "powerplug" : "switch.2"
         default:
             switch deviceClass {
@@ -111,6 +115,32 @@ public struct EntityAttributes: Codable, Equatable, Sendable {
     public var percentage: Double?
     public var preset_modes: [String]?
     public var preset_mode: String?
+    public var temperature: Double?
+    public var current_temperature: Double?
+    public var temperature_unit: String?
+    public var target_temp_step: Double?
+    public var min_temp: Double?
+    public var max_temp: Double?
+    public var hvac_action: String?
+
+    public var targetTemperatureRange: ClosedRange<Double>? {
+        guard (supported_features ?? 0) & 1 != 0,
+              let minimum = min_temp, let maximum = max_temp,
+              minimum.isFinite, maximum.isFinite, maximum > minimum else { return nil }
+        return minimum...maximum
+    }
+
+    public var targetTemperatureStep: Double {
+        guard let step = target_temp_step, step.isFinite, step > 0 else { return 0.5 }
+        return step
+    }
+
+    /** Return a bounded target after moving the supplied temperature by one reported step. */
+    public func adjustedTargetTemperature(from value: Double, increasing: Bool) -> Double? {
+        guard value.isFinite, let range = targetTemperatureRange else { return nil }
+        let adjusted = value + (increasing ? targetTemperatureStep : -targetTemperatureStep)
+        return min(range.upperBound, max(range.lowerBound, (adjusted * 1_000_000).rounded() / 1_000_000))
+    }
 
     public var supportsBrightness: Bool {
         (supported_color_modes ?? []).contains { ["brightness", "color_temp", "hs", "xy", "rgb", "rgbw", "rgbww"].contains($0) }

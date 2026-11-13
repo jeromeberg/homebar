@@ -11,7 +11,7 @@ A lightweight, native macOS menu bar dashboard for Home Assistant.
 
 - Lightweight.
 - Customizable: select, reorder and rename entities.
-- Support for lights, fans, plugs, and sensors.
+- Support for lights, fans, plugs, thermostats, and sensors.
 - Secure token storage in Keychain.
 - Native UI.
 

@@ -62,6 +62,7 @@ struct MenuBarView: View {
                         } else {
                             ForEach(connection.entities.selectedEntities) { entity in
                                 if entity.domain == "sensor" { EntityRowView(entity: entity) }
+                                else if entity.domain == "climate" { ClimateControlView(entity: entity, connection: connection) }
                                 else { DeviceControlView(entity: entity, connection: connection) }
                                 Divider()
                             }

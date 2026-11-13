@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1]
+
+- Added thermostat support with target temperature and heating indicator.
+
 ## [1.0]
 
 First stable release! 🎉

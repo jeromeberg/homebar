@@ -170,6 +170,6 @@ public final class EntityStore {
 
     /** Check whether an entity belongs to a supported domain. */
     private static func supports(_ id: String) -> Bool {
-        ["light", "fan", "sensor", "switch"].contains(String(id.prefix(while: { $0 != "." })))
+        ["light", "fan", "sensor", "switch", "climate"].contains(String(id.prefix(while: { $0 != "." })))
     }
 }

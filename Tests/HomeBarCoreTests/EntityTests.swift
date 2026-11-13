@@ -101,7 +101,7 @@ struct EntityTests {
         #expect(store.selectedEntities.first?.name == "New HA Name")
         store.setLocalName("Reading Lamp", for: "light.desk")
         store.setLocalName("", for: "light.desk")
-        store.setLocalName("Unsupported", for: "climate.room")
+        store.setLocalName("Unsupported", for: "cover.room")
         #expect(store.selectedEntities.first?.name == "New HA Name")
         #expect(defaults.dictionary(forKey: "localEntityNames")?.isEmpty == true)
         let restored = EntityStore(defaults: defaults)

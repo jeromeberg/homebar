@@ -4,6 +4,7 @@ public enum DeviceCommand: Equatable, Sendable {
     case power(Bool)
     case brightness(Int)
     case temperature(Int)
+    case targetTemperature(Double)
     case percentage(Int)
     case preset(String)
 
@@ -26,6 +27,12 @@ public enum DeviceCommand: Equatable, Sendable {
             guard let range = entity.attributes.temperatureRange else { throw ServiceCallError.unsupported }
             service = "turn_on"
             data["color_temp_kelvin"] = Int(min(range.upperBound, max(range.lowerBound, Double(value))))
+        case .targetTemperature(let value) where entity.domain == "climate":
+            guard value.isFinite, entity.state != "heat_cool",
+                  entity.attributes.temperature != nil,
+                  let range = entity.attributes.targetTemperatureRange else { throw ServiceCallError.unsupported }
+            service = "set_temperature"
+            data["temperature"] = min(range.upperBound, max(range.lowerBound, value))
         case .percentage(let value) where entity.domain == "fan" && entity.attributes.supportsFanSpeed:
             service = "set_percentage"
             data["percentage"] = min(100, max(0, value))

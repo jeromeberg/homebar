@@ -51,6 +51,98 @@ struct DeviceControlTests {
     }
 
     @Test
+    /** Use half-degree steps by default and preserve valid Home Assistant steps. */
+    func thermostatTemperatureStep() {
+        var attributes = EntityAttributes()
+        #expect(attributes.targetTemperatureStep == 0.5)
+        for invalid in [0.0, -1.0, Double.nan, Double.infinity] {
+            attributes.target_temp_step = invalid
+            #expect(attributes.targetTemperatureStep == 0.5)
+        }
+        for step in [0.1, 0.5, 1.0] {
+            attributes.target_temp_step = step
+            #expect(attributes.targetTemperatureStep == step)
+        }
+    }
+
+    @Test
+    /** Check thermostat service payloads, fractional steps, bounds, and unsupported modes. */
+    func thermostatCommands() throws {
+        let attributes: [String: Any] = ["supported_features": 1, "temperature": 20.5,
+            "current_temperature": 19.2, "min_temp": 7, "max_temp": 30, "target_temp_step": 0.5,
+            "temperature_unit": "°C", "hvac_action": "heating"]
+        let thermostat = try entity("climate.room", attributes: attributes, state: "heat")
+        #expect(thermostat.isAvailable)
+        #expect(thermostat.isHeating)
+        #expect(thermostat.symbol == "thermometer.medium")
+        #expect(thermostat.attributes.current_temperature == 19.2)
+        #expect(thermostat.attributes.temperature_unit == "°C")
+        #expect(thermostat.attributes.adjustedTargetTemperature(from: 20.5, increasing: true) == 21)
+        #expect(thermostat.attributes.adjustedTargetTemperature(from: 20.5, increasing: false) == 20)
+        #expect(thermostat.attributes.adjustedTargetTemperature(from: 30, increasing: true) == 30)
+        #expect(thermostat.attributes.adjustedTargetTemperature(from: 7, increasing: false) == 7)
+        let message = try DeviceCommand.targetTemperature(21.5).message(for: thermostat)
+        #expect(message["type"] as? String == "call_service")
+        #expect(message["domain"] as? String == "climate")
+        #expect(message["service"] as? String == "set_temperature")
+        #expect(message["target"] as? [String: String] == ["entity_id": "climate.room"])
+        #expect(message["service_data"] as? [String: Double] == ["temperature": 21.5])
+        #expect(try DeviceCommand.targetTemperature(100).message(for: thermostat)["service_data"] as? [String: Double] == ["temperature": 30])
+        #expect(try DeviceCommand.targetTemperature(-100).message(for: thermostat)["service_data"] as? [String: Double] == ["temperature": 7])
+        #expect(throws: ServiceCallError.unsupported) { try DeviceCommand.targetTemperature(.nan).message(for: thermostat) }
+        for state in ["off", "idle", "cool", "auto", "heat_cool"] {
+            let other = try entity("climate.room", attributes: attributes, state: state)
+            #expect(other.isAvailable)
+            if state == "off" { #expect(!other.isHeating) }
+            if state == "heat_cool" {
+                #expect(throws: ServiceCallError.unsupported) { try DeviceCommand.targetTemperature(21).message(for: other) }
+            }
+        }
+        for state in ["unknown", "unavailable"] {
+            let unavailable = try entity("climate.room", attributes: attributes, state: state)
+            #expect(!unavailable.isHeating)
+            #expect(throws: ServiceCallError.unavailable) { try DeviceCommand.targetTemperature(21).message(for: unavailable) }
+        }
+        for invalid: [String: Any] in [[:], ["supported_features": 2],
+            ["supported_features": 1, "temperature": 20, "min_temp": 30, "max_temp": 7]] {
+            let unsupported = try entity("climate.room", attributes: invalid, state: "heat")
+            #expect(throws: ServiceCallError.unsupported) { try DeviceCommand.targetTemperature(21).message(for: unsupported) }
+        }
+        #expect(throws: ServiceCallError.unsupported) { try DeviceCommand.power(true).message(for: thermostat) }
+        let light = try entity(attributes: [:])
+        #expect(throws: ServiceCallError.unsupported) { try DeviceCommand.targetTemperature(21).message(for: light) }
+    }
+
+    @Test
+    /** Track thermostat selection, live heating changes, removed attributes, and disconnection. */
+    func liveThermostatAttributes() throws {
+        let defaults = UserDefaults(suiteName: "ThermostatTests.\(UUID().uuidString)")!
+        let store = EntityStore(defaults: defaults)
+        store.setSelected("climate.room", selected: true)
+        #expect(EntityStore(defaults: defaults).selectedIDs == ["climate.room"])
+        try store.applyCompressed(["a": ["climate.room": ["s": "heat", "a": [
+            "temperature": 20.5, "current_temperature": 19, "hvac_action": "idle",
+            "supported_features": 1, "min_temp": 7, "max_temp": 30]]]], initial: true)
+        #expect(store.selectedEntities.first?.isHeating == false)
+        try store.applyCompressed(["c": ["climate.room": ["+": ["a": [
+            "temperature": 21, "hvac_action": "heating"]]]]], initial: false)
+        #expect(store.selectedEntities.first?.isHeating == true)
+        #expect(store.selectedEntities.first?.attributes.temperature == 21)
+        try store.applyCompressed(["c": ["climate.room": ["+": ["a": ["temperature": NSNull()]],
+            "-": ["a": ["hvac_action", "supported_features"]]]]], initial: false)
+        #expect(store.selectedEntities.first?.isHeating == false)
+        #expect(store.selectedEntities.first?.attributes.temperature == nil)
+        #expect(store.selectedEntities.first?.attributes.targetTemperatureRange == nil)
+        try store.applyLegacy(["data": ["entity_id": "climate.room", "new_state": ["state": "heat", "attributes": [
+            "temperature": 70, "temperature_unit": "°F", "hvac_action": "heating"]]]])
+        #expect(store.selectedEntities.first?.attributes.temperature_unit == "°F")
+        #expect(store.selectedEntities.first?.isHeating == true)
+        store.disconnected()
+        #expect(store.selectedEntities.first?.isAvailable == false)
+        #expect(store.selectedEntities.first?.isHeating == false)
+    }
+
+    @Test
     /** Check switch symbols, power requests, availability, and rejection of expanded controls. */
     func switchCommands() throws {
         let outlet = try entity("switch.plug", attributes: ["device_class": "outlet"])
@@ -115,6 +207,40 @@ struct DeviceControlTests {
             "supported_features": 57, "percentage": 40, "preset_modes": ["Auto"], "preset_mode": "Auto"]]]])
         #expect(store.entities.first { $0.id == "fan.air" }?.attributes.percentage == 40)
         #expect(store.entities.first { $0.id == "fan.air" }?.attributes.preset_mode == "Auto")
+    }
+
+    @Test
+    /** Send thermostat commands over the existing socket and receive authoritative live updates. */
+    func thermostatServiceRouting() async throws {
+        let socket = ScriptedSocket([#"{"type":"auth_required"}"#, #"{"type":"auth_ok"}"#])
+        let client = HomeAssistantClient(factory: { _ in socket })
+        let store = EntityStore()
+        let run = Task { try await client.run(address: ServerAddress("http://home.local"), token: "test", entities: store) { _ in } }
+        defer { client.disconnect(); run.cancel() }
+        try await wait { socket.sent.count == 5 }
+        for id in 1...3 {
+            socket.push("{\"id\":\(id),\"type\":\"result\",\"success\":true,\"result\":[]}")
+        }
+        socket.push(#"{"id":4,"type":"result","success":true,"result":[]}"#)
+        try await wait { socket.sent.count == 6 }
+        socket.push(#"{"id":5,"type":"result","success":true,"result":null}"#)
+        socket.push(#"{"id":5,"type":"event","event":{"a":{"climate.room":{"s":"heat","a":{"temperature":20,"current_temperature":19,"min_temp":7,"max_temp":30,"supported_features":1,"hvac_action":"idle"}}}}}"#)
+        try await wait { store.isLive && store.entities.first?.attributes.temperature == 20 }
+        let thermostat = try #require(store.entities.first)
+        let command = Task { try await client.callService(.targetTemperature(20.5), entity: thermostat) }
+        try await wait { socket.sent.count == 7 }
+        let request = try #require(JSONSerialization.jsonObject(with: socket.sent[6]) as? [String: Any])
+        #expect(request["domain"] as? String == "climate")
+        #expect(request["service"] as? String == "set_temperature")
+        #expect(request["service_data"] as? [String: Double] == ["temperature": 20.5])
+        #expect(store.entities.first?.attributes.temperature == 20)
+        socket.push(#"{"id":6,"type":"result","success":true,"result":null}"#)
+        try await command.value
+        #expect(store.entities.first?.attributes.temperature == 20)
+        socket.push(#"{"id":5,"type":"event","event":{"c":{"climate.room":{"+":{"a":{"temperature":20.5,"hvac_action":"heating"}}}}}}"#)
+        try await wait { store.entities.first?.isHeating == true }
+        #expect(store.entities.first?.attributes.temperature == 20.5)
+        #expect(socket.sentTypes.filter { $0 == "auth" }.count == 1)
     }
 
     @Test
