@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0]
+
+First stable release! 🎉
+
+- Fixed a crash during connection recovery that could cause HomeBar to disappear from the menu bar after sleep.
+
 ## [0.2]
 
 - Added automatic updates.

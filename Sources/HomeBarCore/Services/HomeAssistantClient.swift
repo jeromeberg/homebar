@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 @MainActor
 public protocol WebSocketTransport: AnyObject {
@@ -45,10 +46,21 @@ final class URLSessionTransport: WebSocketTransport {
 
     /** Check the underlying WebSocket connection with a protocol ping. */
     func ping() async throws {
+        try await Self.waitForPong { socket.sendPing(pongReceiveHandler: $0) }
+    }
+
+    /** Wait for the first ping result, ignoring repeated or concurrent callbacks from sendPing. */
+    static func waitForPong(_ sendPing: (@escaping @Sendable ((any Error)?) -> Void) -> Void) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-            socket.sendPing { error in
-                if let error { continuation.resume(throwing: error) }
-                else { continuation.resume() }
+            let pending = OSAllocatedUnfairLock(initialState: Optional(continuation))
+            sendPing { error in
+                let continuation = pending.withLock { value in
+                    let result = value
+                    value = nil
+                    return result
+                }
+                if let error { continuation?.resume(throwing: error) }
+                else { continuation?.resume() }
             }
         }
     }
