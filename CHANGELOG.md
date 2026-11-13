@@ -3,6 +3,7 @@
 ## [1.1]
 
 - Added thermostat support with target temperature and heating indicator.
+- Added an onboarding window for easier setup.
 
 ## [1.0]
 

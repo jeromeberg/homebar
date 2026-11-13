@@ -4,6 +4,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     @Bindable var connection: ConnectionViewModel
+    @Binding var settingsTab: SettingsTab
     @Environment(\.openSettings) private var showSettings
     @AppStorage("menuMaxHeight") private var menuMaxHeight = 400.0
     @State private var entityListHeight: CGFloat = 1
@@ -56,9 +57,12 @@ struct MenuBarView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         if connection.entities.selectedIDs.isEmpty {
-                            Text("Choose entities to display here.")
+                            Text("You're ready! You can now add entities to your dashboard.")
                                 .font(.subheadline).foregroundStyle(.secondary)
-                            Button("Choose Entities…", action: openSettings)
+                            Button("Choose entities…") {
+                                settingsTab = .entities
+                                openSettings()
+                            }
                         } else {
                             ForEach(connection.entities.selectedEntities) { entity in
                                 if entity.domain == "sensor" { EntityRowView(entity: entity) }
