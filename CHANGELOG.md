@@ -5,6 +5,7 @@
 First stable release! 🎉
 
 - Fixed a crash during connection recovery that could cause HomeBar to disappear from the menu bar after sleep.
+- Automatically discover Home Assistant servers on the local network.
 
 ## [0.2]
 

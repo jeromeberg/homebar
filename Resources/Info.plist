@@ -13,6 +13,7 @@
     <key>SUFeedURL</key><string>https://github.com/jeromeberg/homebar/releases/latest/download/appcast.xml</string>
     <key>SUEnableAutomaticChecks</key><true/>
     <key>NSLocalNetworkUsageDescription</key><string>Connect directly to your Home Assistant server on your local network.</string>
+    <key>NSBonjourServices</key><array><string>_home-assistant._tcp</string></array>
     <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/></dict>
 </dict>
 </plist>
