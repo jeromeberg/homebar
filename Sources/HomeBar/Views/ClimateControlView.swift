@@ -9,7 +9,7 @@ struct ClimateControlView: View {
     @State private var error: String?
 
     private var target: Double? { requestedTarget ?? entity.attributes.temperature }
-    private var controlsEnabled: Bool { entity.isAvailable && connection.entities.isLive && !pending && entity.state != "heat_cool" }
+    private var controlsEnabled: Bool { entity.isAvailable && connection.entities.isLive && !pending }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -24,6 +24,11 @@ struct ClimateControlView: View {
                         .foregroundStyle(.orange)
                         .accessibilityLabel("Heating")
                         .help("Heating")
+                } else if entity.isCooling {
+                    Image(systemName: "snowflake")
+                        .foregroundStyle(.blue)
+                        .accessibilityLabel("Cooling")
+                        .help("Cooling")
                 }
                 if entity.isAvailable {
                     Text(temperatureLabel(entity.attributes.current_temperature))
@@ -50,6 +55,12 @@ struct ClimateControlView: View {
                 .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
             }
             .padding(.leading, 30)
+            if let modes = entity.attributes.hvac_modes, !modes.isEmpty {
+                modePicker("Mode", current: entity.state, options: modes) { .hvacMode($0) }
+            }
+            if !entity.attributes.climatePresets.isEmpty {
+                modePicker("Preset", current: entity.attributes.preset_mode, options: entity.attributes.climatePresets) { .preset($0) }
+            }
             if let error {
                 Text(error).font(.caption).foregroundStyle(.secondary)
             }
@@ -58,8 +69,51 @@ struct ClimateControlView: View {
         .padding(.vertical, 4)
         .onDisappear { requestedTarget = nil }
         .onChange(of: entity.attributes.temperature) { requestedTarget = nil }
+        .onChange(of: entity.state) { requestedTarget = nil }
+        .onChange(of: entity.attributes.preset_mode) { requestedTarget = nil }
         .onChange(of: controlsEnabled) {
             if !entity.isAvailable || !connection.entities.isLive { requestedTarget = nil }
+        }
+    }
+
+    /** Create a compact picker for the reported options and send the selected command. */
+    private func modePicker(_ title: String, current: String?, options: [String], command: @escaping (String) -> DeviceCommand) -> some View {
+        Picker(title, selection: Binding(
+            get: { current ?? "" },
+            set: { value in
+                pending = true
+                requestedTarget = nil
+                Task {
+                    defer { pending = false }
+                    do {
+                        try await connection.control(entity.id, command: command(value))
+                        error = nil
+                    } catch {
+                        self.error = (error as? ServiceCallError ?? .unavailable).message
+                    }
+                }
+            }
+        )) {
+            if current == nil {
+                Text("—").tag("").disabled(true)
+            } else if let current, !options.contains(current) {
+                Text(modeLabel(current)).tag(current).disabled(true)
+            }
+            ForEach(options, id: \.self) { Text(modeLabel($0)).tag($0) }
+        }
+        .pickerStyle(.menu)
+        .controlSize(.small)
+        .font(.caption)
+        .padding(.leading, 30)
+        .disabled(!controlsEnabled)
+    }
+
+    /** Return a readable label for a reported mode or preset without changing its service value. */
+    private func modeLabel(_ value: String) -> String {
+        switch value {
+        case "heat_cool": "Heat/Cool"
+        case "fan_only": "Fan only"
+        default: value.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
 
@@ -93,7 +147,7 @@ struct ClimateControlView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!controlsEnabled || next == nil || next == target)
+        .disabled(!controlsEnabled || entity.state == "heat_cool" || next == nil || next == target)
         .accessibilityLabel(increasing ? "Increase target temperature" : "Decrease target temperature")
     }
 }

@@ -51,6 +51,65 @@ struct DeviceControlTests {
     }
 
     @Test
+    /** Detect active cooling from device activity rather than its selected mode. */
+    func coolingActivity() throws {
+        for state in ["cool", "heat_cool", "auto"] {
+            let cooling = try entity("climate.room", attributes: ["hvac_action": "cooling"], state: state)
+            #expect(cooling.isCooling)
+            #expect(!cooling.isHeating)
+        }
+        for state in ["off", "unknown", "unavailable"] {
+            #expect(try !entity("climate.room", attributes: ["hvac_action": "cooling"], state: state).isCooling)
+        }
+        for action in ["idle", "heating", "off"] {
+            #expect(try !entity("climate.room", attributes: ["hvac_action": action], state: "cool").isCooling)
+        }
+        #expect(try !entity("climate.room", attributes: [:], state: "cool").isCooling)
+        #expect(try !entity("fan.air", attributes: ["hvac_action": "cooling"]).isCooling)
+    }
+
+    @Test
+    /** Validate advertised climate modes and presets, including custom preset values and off devices. */
+    func climateModesAndPresets() throws {
+        let modes = ["off", "heat", "cool", "heat_cool", "auto", "dry", "fan_only"]
+        let attributes: [String: Any] = ["hvac_modes": modes, "supported_features": 16,
+            "preset_modes": ["none", "eco", "Custom Preset"], "preset_mode": "eco"]
+        let climate = try entity("climate.room", attributes: attributes, state: "off")
+        #expect(climate.attributes.hvac_modes == modes)
+        #expect(climate.attributes.climatePresets == ["none", "eco", "Custom Preset"])
+        for mode in modes {
+            let message = try DeviceCommand.hvacMode(mode).message(for: climate)
+            #expect(message["type"] as? String == "call_service")
+            #expect(message["domain"] as? String == "climate")
+            #expect(message["target"] as? [String: String] == ["entity_id": "climate.room"])
+            #expect(message["service"] as? String == "set_hvac_mode")
+            #expect(message["service_data"] as? [String: String] == ["hvac_mode": mode])
+        }
+        for preset in climate.attributes.climatePresets {
+            let message = try DeviceCommand.preset(preset).message(for: climate)
+            #expect(message["domain"] as? String == "climate")
+            #expect(message["service"] as? String == "set_preset_mode")
+            #expect(message["service_data"] as? [String: String] == ["preset_mode": preset])
+        }
+        #expect(throws: ServiceCallError.unsupported) { try DeviceCommand.hvacMode("missing").message(for: climate) }
+        #expect(throws: ServiceCallError.unsupported) { try DeviceCommand.preset("missing").message(for: climate) }
+        let basic = try entity("climate.room", attributes: ["supported_features": 8, "preset_modes": ["eco"]], state: "heat")
+        #expect(basic.attributes.climatePresets.isEmpty)
+        #expect(throws: ServiceCallError.unsupported) { try DeviceCommand.preset("eco").message(for: basic) }
+        #expect(throws: ServiceCallError.unsupported) { try DeviceCommand.hvacMode("heat").message(for: basic) }
+        let fan = try entity("fan.air", attributes: attributes)
+        #expect(throws: ServiceCallError.unsupported) { try DeviceCommand.hvacMode("cool").message(for: fan) }
+        for state in ["unknown", "unavailable"] {
+            let unavailable = try entity("climate.room", attributes: attributes, state: state)
+            #expect(throws: ServiceCallError.unavailable) { try DeviceCommand.hvacMode("cool").message(for: unavailable) }
+            #expect(throws: ServiceCallError.unavailable) { try DeviceCommand.preset("eco").message(for: unavailable) }
+        }
+        let cooling = try entity("climate.room", attributes: ["supported_features": 1,
+            "temperature": 24, "min_temp": 16, "max_temp": 30], state: "cool")
+        #expect(try DeviceCommand.targetTemperature(23).message(for: cooling)["service_data"] as? [String: Double] == ["temperature": 23])
+    }
+
+    @Test
     /** Use half-degree steps by default and preserve valid Home Assistant steps. */
     func thermostatTemperatureStep() {
         var attributes = EntityAttributes()
@@ -114,7 +173,7 @@ struct DeviceControlTests {
     }
 
     @Test
-    /** Track thermostat selection, live heating changes, removed attributes, and disconnection. */
+    /** Track thermostat selection, live activity and mode changes, removed attributes, and disconnection. */
     func liveThermostatAttributes() throws {
         let defaults = UserDefaults(suiteName: "ThermostatTests.\(UUID().uuidString)")!
         let store = EntityStore(defaults: defaults)
@@ -128,9 +187,22 @@ struct DeviceControlTests {
             "temperature": 21, "hvac_action": "heating"]]]]], initial: false)
         #expect(store.selectedEntities.first?.isHeating == true)
         #expect(store.selectedEntities.first?.attributes.temperature == 21)
-        try store.applyCompressed(["c": ["climate.room": ["+": ["a": ["temperature": NSNull()]],
-            "-": ["a": ["hvac_action", "supported_features"]]]]], initial: false)
+        try store.applyCompressed(["c": ["climate.room": ["+": ["s": "cool", "a": [
+            "hvac_action": "cooling", "hvac_modes": ["off", "cool"], "supported_features": 17,
+            "preset_modes": ["none", "eco"], "preset_mode": "eco"]]]]], initial: false)
+        #expect(store.selectedEntities.first?.isCooling == true)
         #expect(store.selectedEntities.first?.isHeating == false)
+        #expect(store.selectedEntities.first?.state == "cool")
+        #expect(store.selectedEntities.first?.attributes.hvac_modes == ["off", "cool"])
+        #expect(store.selectedEntities.first?.attributes.climatePresets == ["none", "eco"])
+        #expect(store.selectedEntities.first?.attributes.preset_mode == "eco")
+        try store.applyCompressed(["c": ["climate.room": ["+": ["a": ["temperature": NSNull()]],
+            "-": ["a": ["hvac_action", "supported_features", "hvac_modes", "preset_modes", "preset_mode"]]]]], initial: false)
+        #expect(store.selectedEntities.first?.isHeating == false)
+        #expect(store.selectedEntities.first?.isCooling == false)
+        #expect(store.selectedEntities.first?.attributes.hvac_modes == nil)
+        #expect(store.selectedEntities.first?.attributes.climatePresets.isEmpty == true)
+        #expect(store.selectedEntities.first?.attributes.preset_mode == nil)
         #expect(store.selectedEntities.first?.attributes.temperature == nil)
         #expect(store.selectedEntities.first?.attributes.targetTemperatureRange == nil)
         try store.applyLegacy(["data": ["entity_id": "climate.room", "new_state": ["state": "heat", "attributes": [

@@ -3,6 +3,7 @@
 ## [1.2]
 
 - Added Home Assistant browser sign-in with automatic token renewal.
+- Added climate modes and presets selection, and cooling indicator.
 
 ## [1.1]
 

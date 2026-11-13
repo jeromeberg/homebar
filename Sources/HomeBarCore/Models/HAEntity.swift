@@ -68,6 +68,7 @@ public struct HAEntity: Identifiable, Equatable {
     }
     public var domain: String { String(id.prefix(while: { $0 != "." })) }
     public var isHeating: Bool { domain == "climate" && isAvailable && state != "off" && attributes.hvac_action == "heating" }
+    public var isCooling: Bool { domain == "climate" && isAvailable && state != "off" && attributes.hvac_action == "cooling" }
 
     public var stateLabel: String {
         switch state {
@@ -122,6 +123,9 @@ public struct EntityAttributes: Codable, Equatable, Sendable {
     public var min_temp: Double?
     public var max_temp: Double?
     public var hvac_action: String?
+    public var hvac_modes: [String]?
+
+    public var climatePresets: [String] { (supported_features ?? 0) & 16 != 0 ? preset_modes ?? [] : [] }
 
     public var targetTemperatureRange: ClosedRange<Double>? {
         guard (supported_features ?? 0) & 1 != 0,

@@ -7,6 +7,7 @@ public enum DeviceCommand: Equatable, Sendable {
     case targetTemperature(Double)
     case percentage(Int)
     case preset(String)
+    case hvacMode(String)
 
     /** Build a supported service request for the latest entity state, or reject stale controls. */
     func message(for entity: HAEntity) throws -> [String: Any] {
@@ -39,6 +40,12 @@ public enum DeviceCommand: Equatable, Sendable {
         case .preset(let value) where entity.domain == "fan" && entity.attributes.fanPresets.contains(value):
             service = "set_preset_mode"
             data["preset_mode"] = value
+        case .preset(let value) where entity.domain == "climate" && entity.attributes.climatePresets.contains(value):
+            service = "set_preset_mode"
+            data["preset_mode"] = value
+        case .hvacMode(let value) where entity.domain == "climate" && entity.attributes.hvac_modes?.contains(value) == true:
+            service = "set_hvac_mode"
+            data["hvac_mode"] = value
         default: throw ServiceCallError.unsupported
         }
         return ["type": "call_service", "domain": entity.domain, "service": service,
