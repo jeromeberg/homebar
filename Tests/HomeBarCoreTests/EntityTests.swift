@@ -103,14 +103,13 @@ struct EntityTests {
         store.setLocalName("", for: "light.desk")
         store.setLocalName("Unsupported", for: "cover.room")
         #expect(store.selectedEntities.first?.name == "New HA Name")
-        #expect(defaults.dictionary(forKey: "localEntityNames")?.isEmpty == true)
         let restored = EntityStore(defaults: defaults)
         try restored.load(json(#"[{"entity_id":"light.desk","name":"New HA Name"}]"#), command: "config/entity_registry/list")
         #expect(restored.selectedEntities.first?.name == "New HA Name")
     }
 
     @Test
-    /** Keep local names on reconnect and remove them when switching to another Home Assistant server. */
+    /** Keep local names separate for each Home Assistant server and retain them on reconnect. */
     func localNamesFollowServer() {
         let (store, defaults) = store()
         store.begin(server: "http://home.local")
@@ -124,6 +123,59 @@ struct EntityTests {
         restored.setSelected("light.desk", selected: true)
         #expect(restored.selectedEntities.first?.name == "Desk")
         #expect(EntityStore(defaults: defaults).selectedEntities.first?.name == "Desk")
+        restored.begin(server: "http://home.local")
+        #expect(restored.selectedEntities.first?.name == "Reading Lamp")
+    }
+
+    @Test
+    /** Restore each server's selections, order, and names after switches and app restarts. */
+    func preferencesPerServer() {
+        let (store, defaults) = store()
+        store.begin(server: "http://home.local")
+        store.setSelected("light.desk", selected: true)
+        store.setSelected("switch.plug", selected: true)
+        store.moveSelected(fromOffsets: IndexSet(integer: 0), toOffset: 2)
+        store.setLocalName("Home Lamp", for: "light.desk")
+        store.begin(server: "http://cabin.local")
+        #expect(store.selectedIDs.isEmpty)
+        store.setSelected("light.desk", selected: true)
+        #expect(store.selectedEntities.first?.name == "Desk")
+        store.setLocalName("Cabin Lamp", for: "light.desk")
+        store.disconnected()
+
+        let restored = EntityStore(defaults: defaults)
+        #expect(restored.selectedIDs == ["light.desk"])
+        #expect(restored.selectedEntities.first?.name == "Cabin Lamp")
+        restored.begin(server: "http://home.local")
+        #expect(restored.selectedIDs == ["switch.plug", "light.desk"])
+        #expect(restored.selectedEntities.last?.name == "Home Lamp")
+        restored.setSelected("switch.plug", selected: false)
+        restored.setLocalName("", for: "light.desk")
+        restored.begin(server: "http://cabin.local")
+        #expect(restored.selectedIDs == ["light.desk"])
+        #expect(restored.selectedEntities.first?.name == "Cabin Lamp")
+        restored.begin(server: "http://home.local")
+        #expect(restored.selectedIDs == ["light.desk"])
+        #expect(restored.selectedEntities.first?.name == "Desk")
+    }
+
+    @Test
+    /** Migrate legacy preferences to their original server even when another server connects first. */
+    func migrateLegacyPreferences() {
+        let (_, defaults) = store()
+        defaults.set("http://home.local", forKey: "selectedEntitiesServer")
+        defaults.set(["switch.plug", "light.desk"], forKey: "selectedEntityIDs")
+        defaults.set(["light.desk": "Home Lamp"], forKey: "localEntityNames")
+        let migrated = EntityStore(defaults: defaults)
+        #expect(migrated.selectedIDs == ["switch.plug", "light.desk"])
+        migrated.begin(server: "http://cabin.local")
+        #expect(migrated.selectedIDs.isEmpty)
+        let restored = EntityStore(defaults: defaults)
+        restored.begin(server: "http://home.local")
+        #expect(restored.selectedIDs == ["switch.plug", "light.desk"])
+        #expect(restored.selectedEntities.last?.name == "Home Lamp")
+        #expect(defaults.object(forKey: "selectedEntityIDs") == nil)
+        #expect(defaults.object(forKey: "localEntityNames") == nil)
     }
 
     @Test

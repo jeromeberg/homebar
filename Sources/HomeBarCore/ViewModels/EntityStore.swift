@@ -21,6 +21,14 @@ public final class EntityStore {
         selectedIDs = defaults.stringArray(forKey: "selectedEntityIDs") ?? []
         localNames = defaults.dictionary(forKey: "localEntityNames") as? [String: String] ?? [:]
         server = defaults.string(forKey: "selectedEntitiesServer")
+        if let server {
+            let preferences = defaults.dictionary(forKey: "entityPreferencesByServer")?[server] as? [String: Any]
+            if let preferences {
+                selectedIDs = preferences["selectedIDs"] as? [String] ?? []
+                localNames = preferences["localNames"] as? [String: String] ?? [:]
+            }
+            savePreferences()
+        }
     }
 
     public var entities: [HAEntity] {
@@ -66,7 +74,7 @@ public final class EntityStore {
         guard Self.supports(id) else { return }
         if selected && !selectedIDs.contains(id) { selectedIDs.append(id) }
         if !selected { selectedIDs.removeAll { $0 == id } }
-        defaults.set(selectedIDs, forKey: "selectedEntityIDs")
+        savePreferences()
     }
 
     /** Save a local display name for an entity ID. An empty name restores the Home Assistant name. */
@@ -74,7 +82,7 @@ public final class EntityStore {
         guard Self.supports(id) else { return }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         localNames[id] = trimmed.isEmpty ? nil : trimmed
-        defaults.set(localNames, forKey: "localEntityNames")
+        savePreferences()
     }
 
     /** Move the selected IDs at the supplied offsets before the original destination offset and save the order. */
@@ -86,18 +94,34 @@ public final class EntityStore {
         var reordered = selectedIDs.enumerated().filter { !source.contains($0.offset) }.map(\.element)
         reordered.insert(contentsOf: moved, at: insertion)
         selectedIDs = reordered
-        defaults.set(selectedIDs, forKey: "selectedEntityIDs")
+        savePreferences()
     }
 
-    /** Start discovery and clear selections and local names when the authenticated server changes. */
-    func begin(server: String) {
-        if let previous = self.server, previous != server {
-            selectedIDs = []
+    /** Save selections and local names under the active server, retaining unassigned legacy preferences until connection. */
+    private func savePreferences() {
+        guard let server else {
             defaults.set(selectedIDs, forKey: "selectedEntityIDs")
-            localNames = [:]
             defaults.set(localNames, forKey: "localEntityNames")
+            return
+        }
+        var preferences = defaults.dictionary(forKey: "entityPreferencesByServer") ?? [:]
+        preferences[server] = ["selectedIDs": selectedIDs, "localNames": localNames]
+        defaults.set(preferences, forKey: "entityPreferencesByServer")
+        defaults.removeObject(forKey: "selectedEntityIDs")
+        defaults.removeObject(forKey: "localEntityNames")
+    }
+
+    /** Start discovery with the authenticated server's saved selection, order, and local names. */
+    func begin(server: String) {
+        if self.server != server {
+            let preferences = defaults.dictionary(forKey: "entityPreferencesByServer")?[server] as? [String: Any]
+            if self.server != nil || preferences != nil {
+                selectedIDs = preferences?["selectedIDs"] as? [String] ?? []
+                localNames = preferences?["localNames"] as? [String: String] ?? [:]
+            }
         }
         self.server = server
+        savePreferences()
         defaults.set(server, forKey: "selectedEntitiesServer")
         areas = [:]
         devices = [:]

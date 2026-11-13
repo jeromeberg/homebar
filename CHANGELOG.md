@@ -4,6 +4,8 @@
 
 - Added Home Assistant browser sign-in with automatic token renewal.
 - Added climate modes and presets selection, and cooling indicator.
+- Remember dashboard preferences (entities, name, order) per server.
+- Automatically migrate existing dashboard entities.
 
 ## [1.1]
 
