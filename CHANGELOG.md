@@ -6,6 +6,8 @@ First stable release! 🎉
 
 - Fixed a crash during connection recovery that could cause HomeBar to disappear from the menu bar after sleep.
 - Automatically discover Home Assistant servers on the local network.
+- Add a popover explaining how to create an access token.
+- Add an adjustable maximum dashboard height setting.
 
 ## [0.2]
 
