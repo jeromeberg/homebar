@@ -7,11 +7,14 @@ public protocol TokenStore {
     func read(for server: String) throws -> String?
     /** Store a validated token for the given normalized server URL. */
     func save(_ token: String, for server: String) throws
+    /** Delete the saved credential for a server. */
+    func remove(for server: String) throws
 }
 
 public struct KeychainService: TokenStore {
+    private let service: String
     /** Create the app’s Keychain token store. */
-    public init() {}
+    public init(service: String = "com.jeromeberg.HomeBar.access-token") { self.service = service }
 
     /** Load the token for a normalized server URL, returning nil when no item exists. */
     public func read(for server: String) throws -> String? {
@@ -38,10 +41,16 @@ public struct KeychainService: TokenStore {
         } else if status != errSecSuccess { throw ConnectionError.storage }
     }
 
+    /** Delete a credential, accepting an already absent item. */
+    public func remove(for server: String) throws {
+        let status = SecItemDelete(query(for: server) as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else { throw ConnectionError.storage }
+    }
+
     /** Build an exact Keychain query for this app and server. */
     private func query(for server: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
-         kSecAttrService as String: "com.jeromeberg.HomeBar.access-token",
+         kSecAttrService as String: service,
          kSecAttrAccount as String: server,
          kSecAttrSynchronizable as String: false]
     }

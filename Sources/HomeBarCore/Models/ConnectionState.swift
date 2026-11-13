@@ -33,7 +33,7 @@ public enum ConnectionError: Error, Equatable, Sendable {
         switch self {
         case .invalidURL: "Enter a valid http:// or https:// server URL without credentials, a query, or a fragment."
         case .missingToken: "Enter a Home Assistant access token."
-        case .authentication: "Home Assistant rejected the token. Create a new token and try again."
+        case .authentication: "Home Assistant rejected the credentials. Sign in again or enter a new access token."
         case .unexpectedResponse: "The server returned an unexpected response. Check the Home Assistant URL."
         case .timeout: "The connection timed out. Check the server and your network."
         case .storage: "Unable to access macOS Keychain. Check Keychain access and try again."

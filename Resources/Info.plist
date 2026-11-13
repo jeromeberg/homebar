@@ -8,6 +8,11 @@
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>1.0</string>
     <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleURLTypes</key>
+    <array><dict>
+        <key>CFBundleURLName</key><string>com.jeromeberg.HomeBar.auth</string>
+        <key>CFBundleURLSchemes</key><array><string>com.jeromeberg.homebar</string></array>
+    </dict></array>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>SUFeedURL</key><string>https://github.com/jeromeberg/homebar/releases/latest/download/appcast.xml</string>

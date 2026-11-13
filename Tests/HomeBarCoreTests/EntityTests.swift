@@ -304,7 +304,7 @@ struct EntityTests {
         let first = ScriptedSocket(frames)
         let second = ScriptedSocket(frames)
         var connections = 0
-        let model = ConnectionViewModel(defaults: defaults, store: MemoryTokens(), observeSystem: false,
+        let model = ConnectionViewModel(defaults: defaults, store: MemoryTokens(), observeSystem: false, refreshStore: MemoryTokens(),
             clientFactory: { HomeAssistantClient(factory: { _ in
                 connections += 1
                 return connections == 1 ? first : second

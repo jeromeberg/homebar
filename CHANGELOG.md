@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2]
+
+- Added Home Assistant browser sign-in with automatic token renewal.
+
 ## [1.1]
 
 - Added thermostat support with target temperature and heating indicator.

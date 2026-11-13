@@ -11,6 +11,9 @@ final class MemoryTokens: TokenStore {
     /** Read a test token for one server. */
     func read(for server: String) throws -> String? { tokens[server] }
 
+    /** Remove a test credential. */
+    func remove(for server: String) throws { tokens[server] = nil }
+
     /** Save a test token or simulate a Keychain failure. */
     func save(_ token: String, for server: String) throws {
         if rejectWrites { throw ConnectionError.storage }
@@ -106,7 +109,7 @@ struct ConnectionTests {
     /** Create isolated preferences and token storage for a connection model. */
     private func model(socket: ScriptedSocket, store: MemoryTokens = MemoryTokens()) -> (ConnectionViewModel, UserDefaults) {
         let defaults = UserDefaults(suiteName: "HomeBarTests.\(UUID().uuidString)")!
-        let model = ConnectionViewModel(defaults: defaults, store: store, observeSystem: false,
+        let model = ConnectionViewModel(defaults: defaults, store: store, observeSystem: false, refreshStore: MemoryTokens(),
             clientFactory: { HomeAssistantClient(handshakeTimeout: .seconds(1), factory: { _ in socket }) })
         return (model, defaults)
     }
@@ -253,7 +256,7 @@ struct ConnectionTests {
         let defaults = UserDefaults(suiteName: "HomeBarTests.\(UUID().uuidString)")!
         let store = MemoryTokens()
         var opened = 0
-        let model = ConnectionViewModel(defaults: defaults, store: store, observeSystem: false,
+        let model = ConnectionViewModel(defaults: defaults, store: store, observeSystem: false, refreshStore: MemoryTokens(),
             clientFactory: { HomeAssistantClient(factory: { _ in
                 opened += 1
                 return opened == 1 ? first : second
@@ -280,7 +283,7 @@ struct ConnectionTests {
         let second = ScriptedSocket([greeting, accepted])
         let defaults = UserDefaults(suiteName: "HomeBarTests.\(UUID().uuidString)")!
         var opened = 0
-        let model = ConnectionViewModel(defaults: defaults, store: MemoryTokens(), observeSystem: false,
+        let model = ConnectionViewModel(defaults: defaults, store: MemoryTokens(), observeSystem: false, refreshStore: MemoryTokens(),
             clientFactory: { HomeAssistantClient(factory: { _ in
                 opened += 1
                 return opened == 1 ? first : second

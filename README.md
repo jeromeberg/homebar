@@ -30,13 +30,6 @@ To open HomeBar (only required once):
 3. Scroll down to **Security** and click **Open Anyway**.
 4. Confirm when prompted.
 
-## Connect to Home Assistant 
-
-1. Open Home Assistant and go to your profile → **Security**.
-2. Under **Long-lived access tokens**, create a token and copy it (it will only be shown once).
-3. Open HomeBar and enter your Home Assistant server URL.
-4. Paste the token into Access Token and click Connect.
-
 ## Instructions
 
 ### Requirements
@@ -63,4 +56,4 @@ open .build/HomeBar.app
 ## Resources
 
 - [Home Assistant WebSocket API](https://developers.home-assistant.io/docs/api/websocket/)
-- [Home Assistant authentication API](https://developers.home-assistant.io/docs/auth_api/#long-lived-access-token)
+- [Home Assistant authentication API](https://contributors.home-assistant.io/core/internals/auth-api/)
