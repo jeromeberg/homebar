@@ -3,10 +3,31 @@ import SwiftUI
 
 struct ConnectionSettingsView: View {
     @Bindable var connection: ConnectionViewModel
+    @State private var discovery = ServerDiscovery()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Connect to Home Assistant").font(.subheadline.weight(.semibold))
+            HStack {
+                Menu("Discovered Servers") {
+                    ForEach(discovery.servers) { server in
+                        Button("\(server.name) — \(server.url)") {
+                            connection.serverURL = server.url
+                        }
+                    }
+                }
+                .disabled(discovery.servers.isEmpty || connection.state.isBusy)
+                if discovery.servers.isEmpty {
+                    Text(discovery.error == nil ? "Searching the local network…" : "Discovery unavailable")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                if discovery.error != nil {
+                    Button("Retry", action: discovery.start)
+                }
+            }
+            if let error = discovery.error {
+                Text(error).font(.caption).foregroundStyle(.secondary)
+            }
             VStack(alignment: .leading, spacing: 5) {
                 Text("Server URL").font(.caption)
                 TextField("http://192.168.1.10:8123", text: $connection.serverURL)
@@ -29,5 +50,7 @@ struct ConnectionSettingsView: View {
             }
         }
         .textFieldStyle(.roundedBorder)
+        .onAppear(perform: discovery.start)
+        .onDisappear(perform: discovery.stop)
     }
 }
