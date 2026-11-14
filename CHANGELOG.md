@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3]
+
+- Fixed toggle state handling while waiting on Home Assistant.
+
 ## [1.2]
 
 - Added Home Assistant browser sign-in with automatic token renewal.

@@ -13,9 +13,9 @@ struct DeviceControlView: View {
             if isExpanded && entity.domain != "switch" {
                 Group {
                     if entity.domain == "light" {
-                        LightControlView(entity: entity, send: send)
+                        LightControlView(entity: entity) { _ = await send($0) }
                     } else {
-                        FanControlView(entity: entity, send: send)
+                        FanControlView(entity: entity) { _ = await send($0) }
                     }
                 }
                 .padding(.leading, 30)
@@ -28,24 +28,26 @@ struct DeviceControlView: View {
         .padding(.vertical, 4)
     }
 
-    /** Send one command through the connection model and show a fixed failure message. */
-    private func send(_ command: DeviceCommand) async {
+    /** Send a command, show a fixed failure message, and return whether it succeeded. */
+    private func send(_ command: DeviceCommand) async -> Bool {
         do {
             try await connection.control(entity.id, command: command)
             error = nil
+            return true
         } catch is CancellationError {
         } catch {
             self.error = (error as? ServiceCallError ?? .unavailable).message
         }
+        return false
     }
 }
 
 struct DeviceHeaderView: View {
     let entity: HAEntity
     @Binding var isExpanded: Bool
-    let send: (DeviceCommand) async -> Void
+    let send: (DeviceCommand) async -> Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var pending = false
+    @State private var pendingPower: Bool?
 
     private var canToggle: Bool {
         ["light", "switch"].contains(entity.domain) || (entity.attributes.supported_features ?? 0) & (entity.state == "on" ? 16 : 32) != 0
@@ -73,23 +75,32 @@ struct DeviceHeaderView: View {
                     .help(entity.updateHelp)
             }
             Toggle(entity.stateLabel, isOn: Binding(
-                get: { entity.state == "on" },
-                set: { value in
-                    pending = true
-                    Task {
-                        await send(.power(value))
-                        pending = false
-                    }
-                }
+                get: { pendingPower ?? (entity.state == "on") },
+                set: { pendingPower = $0 }
             ))
             .labelsHidden()
             .toggleStyle(.switch)
             .controlSize(.small)
-            .disabled(pending || !canToggle)
+            .disabled(pendingPower != nil || !canToggle)
             .accessibilityLabel(entity.name)
             .help(entity.updateHelp)
         }
         .font(.subheadline)
+        .task(id: pendingPower) {
+            guard let pendingPower else { return }
+            let succeeded = await send(.power(pendingPower))
+            guard !Task.isCancelled else { return }
+            if succeeded {
+                do { try await Task.sleep(for: .seconds(20)) }
+                catch { return }
+            }
+            self.pendingPower = nil
+        }
+        .onChange(of: entity.state) {
+            if !entity.isAvailable || pendingPower == (entity.state == "on") {
+                pendingPower = nil
+            }
+        }
     }
 
     private var label: some View {
