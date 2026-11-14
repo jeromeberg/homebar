@@ -7,8 +7,9 @@
 - Remember dashboard preferences (entities, name, order) per server.
 - Automatically migrate existing dashboard entities.
 - Added a `--show-onboarding` launch flag for debugging.
+- Added "last updated" tooltip.
+- Fixed a bug that caused some entities to appear without a name.
 - Various small improvements and fixes.
-- Added "last updated" tooltip over values.
 
 ## [1.1]
 
@@ -27,7 +28,7 @@ First stable release! 🎉
 ## [0.2]
 
 - Added automatic updates.
-
+ 
 ## [0.1]
 
 First release of HomeBar!

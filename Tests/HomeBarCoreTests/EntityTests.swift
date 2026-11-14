@@ -100,6 +100,29 @@ struct EntityTests {
         #expect(store.groups(search: "", showHidden: true).flatMap(\.entities).count == 9)
     }
 
+    @Test(arguments: ["", " \n\t"])
+    /** Skip blank names and retain friendly, original, and entity ID fallbacks. */
+    func blankEntityNames(blank: String) throws {
+        let (store, _) = store()
+        try store.load([
+            ["entity_id": "sensor.water_ocea_cold_water", "name": blank],
+            ["entity_id": "light.chevet_timothee", "name": blank],
+            ["entity_id": "sensor.original", "name": blank, "original_name": "Original Name"],
+            ["entity_id": "sensor.fallback_name", "name": blank, "original_name": blank]
+        ], command: "config/entity_registry/list")
+        try store.load(json(#"[{"entity_id":"sensor.water_ocea_cold_water","state":"4.48","attributes":{"friendly_name":"Water OCEA","unit_of_measurement":"m³","device_class":"water"}},{"entity_id":"light.chevet_timothee","state":"off","attributes":{"friendly_name":"chevet Timothée","supported_color_modes":["onoff"],"supported_features":0}}]"#), command: "get_states")
+        for id in ["sensor.original", "sensor.fallback_name"] {
+            try store.applyLegacy(["data": ["entity_id": id, "new_state": [
+                "state": "0", "attributes": ["friendly_name": blank]
+            ]]])
+        }
+        let names = Dictionary(uniqueKeysWithValues: store.entities.map { ($0.id, $0.name) })
+        #expect(names["sensor.water_ocea_cold_water"] == "Water OCEA")
+        #expect(names["light.chevet_timothee"] == "chevet Timothée")
+        #expect(names["sensor.original"] == "Original Name")
+        #expect(names["sensor.fallback_name"] == "Fallback Name")
+    }
+
     @Test
     /** Restore selected IDs, prevent duplicate checkbox additions, and retain unavailable selections. */
     func selectionPersistence() throws {
