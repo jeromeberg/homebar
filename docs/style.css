@@ -1,8 +1,8 @@
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1d1d1f;
-  background: #f5f5f7;
+  color: #f5f5f7;
+  background: #161617;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -18,7 +18,7 @@ body {
 }
 
 main {
-  width: min(100% - 48px, 980px);
+  width: min(100% - 54px, 980px);
   margin: auto;
   padding: 80px 0 56px;
   display: flex;
@@ -33,7 +33,7 @@ main {
 
 .eyebrow {
   margin: 0 0 16px;
-  color: #6e6e73;
+  color: #a1a1a6;
   font-size: 14px;
   font-weight: 600;
 }
@@ -48,7 +48,7 @@ h1 {
 
 .description {
   margin: 24px 0 32px;
-  color: #6e6e73;
+  color: #a1a1a6;
   font-size: 23px;
   line-height: 1.45;
   letter-spacing: -0.025em;
@@ -82,12 +82,12 @@ h1 {
 }
 
 .secondary {
-  color: #0066cc;
+  color: #66b1ff;
   box-shadow: inset 0 0 0 1px currentColor;
 }
 
 .secondary:hover {
-  background: #e8edf4;
+  background: #232e3a;
 }
 
 .button:focus-visible {
@@ -97,7 +97,7 @@ h1 {
 
 .compatibility {
   margin: 16px 0 0;
-  color: #6e6e73;
+  color: #a1a1a6;
   font-size: 12px;
 }
 
@@ -109,15 +109,73 @@ h1 {
   flex-shrink: 0;
 }
 
+.dashboard img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.screenshot-toggle {
+  width: fit-content;
+  margin: 7.2px auto 0;
+  padding: 2px;
+  border: 1px solid #3a3a3a;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.screenshot-toggle:not([hidden]) {
+  display: flex;
+}
+
+.screenshot-toggle span {
+  display: block;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #999999;
+  transition: color 180ms ease, background-color 180ms ease;
+}
+
+.screenshot-toggle span::before {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  mask: var(--icon) center / contain no-repeat;
+}
+
+.screenshot-toggle .sun {
+  --icon: url("sun.svg");
+}
+
+.screenshot-toggle .moon {
+  --icon: url("moon.svg");
+}
+
+.screenshot-toggle[aria-pressed="false"] .sun,
+.screenshot-toggle[aria-pressed="true"] .moon {
+  color: #fff;
+  background: #0071e3;
+}
+
+.screenshot-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 footer {
   padding: 24px;
-  color: #6e6e73;
+  color: #a1a1a6;
   font-size: 12px;
   text-align: center;
 }
 
 @media (max-width: 800px) {
   main {
+    width: calc(100% - 48px);
     flex-direction: column;
     gap: 40px;
     padding-top: 64px;
@@ -126,27 +184,5 @@ footer {
 
   .actions {
     justify-content: center;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f5f5f7;
-    background: #161617;
-  }
-
-  .eyebrow,
-  .description,
-  .compatibility,
-  footer {
-    color: #a1a1a6;
-  }
-
-  .secondary {
-    color: #66b1ff;
-  }
-
-  .secondary:hover {
-    background: #232e3a;
   }
 }
