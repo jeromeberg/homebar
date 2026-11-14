@@ -3,7 +3,7 @@ import Sparkle
 import SwiftUI
 
 enum SettingsTab: Hashable {
-    case entities, customize, connection, general, about
+    case general, entities, customize, connection, about
 }
 
 struct SettingsView: View {
@@ -13,6 +13,9 @@ struct SettingsView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            GeneralSettingsView(updater: updater)
+                .tabItem { Label("General", systemImage: "gearshape") }
+                .tag(SettingsTab.general)
             EntityPickerView(store: connection.entities, connected: connection.state == .connected)
                 .tabItem { Label("Entities", systemImage: "checklist") }
                 .tag(SettingsTab.entities)
@@ -31,11 +34,8 @@ struct SettingsView: View {
                 Spacer()
             }
             .padding(24)
-            .tabItem { Label("Connection", systemImage: "network") }
+            .tabItem { Label("Server", systemImage: "network") }
             .tag(SettingsTab.connection)
-            GeneralSettingsView(updater: updater)
-                .tabItem { Label("General", systemImage: "gearshape") }
-                .tag(SettingsTab.general)
             AboutSettingsView()
                 .tabItem { Label("About", systemImage: "info.circle") }
                 .tag(SettingsTab.about)

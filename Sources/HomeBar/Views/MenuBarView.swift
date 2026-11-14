@@ -28,21 +28,13 @@ struct MenuBarView: View {
                     .frame(width: 8, height: 8)
                     .help([connection.state.label, connection.detail].compactMap { $0 }.joined(separator: "\n"))
                     .accessibilityLabel(connection.state.label)
-                Menu {
-                    Button("Settings…", action: openSettings)
-                    Divider()
-                    Button("Disconnect", action: connection.disconnect)
-                        .disabled(connection.state != .connected && !connection.state.isBusy)
-                    Button("Quit HomeBar") { NSApplication.shared.terminate(nil) }
-                        .keyboardShortcut("q")
-                } label: {
+                Button(action: openSettings) {
                     Image(systemName: "gearshape")
                 }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
+                .buttonStyle(.borderless)
                 .fixedSize()
-                .help("Settings and actions")
-                .accessibilityLabel("Settings and actions")
+                .help("Settings")
+                .accessibilityLabel("Settings")
             }
             .padding(18)
             Divider()
@@ -57,9 +49,9 @@ struct MenuBarView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         if connection.entities.selectedIDs.isEmpty {
-                            Text("You're ready! You can now add entities to your dashboard.")
+                            Text("You're all set! You can now add entities to your dashboard.")
                                 .font(.subheadline).foregroundStyle(.secondary)
-                            Button("Choose entities…") {
+                            Button("Browse entities…") {
                                 settingsTab = .entities
                                 openSettings()
                             }

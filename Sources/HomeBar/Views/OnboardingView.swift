@@ -17,7 +17,7 @@ struct OnboardingView: View {
                 ConnectionSettingsView(connection: connection)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(connection.state.label).font(.subheadline.weight(.semibold))
                 if let detail = connection.detail {
                     Text(detail).font(.callout).foregroundStyle(.secondary)
@@ -27,9 +27,19 @@ struct OnboardingView: View {
                 }
             }
 
+            LaunchAtLoginView()
+                .toggleStyle(.checkbox)
+                .padding(.top, 8)
+
             HStack {
                 Spacer()
-                Button(connection.state == .connected ? "Done" : "Set Up Later", action: onFinish)
+                if connection.state == .connected {
+                    Button("Done", action: onFinish)
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
+                } else {
+                    Button("Set Up Later", action: onFinish)
+                }
             }
         }
         .padding(28)

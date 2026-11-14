@@ -17,6 +17,7 @@ struct AboutSettingsView: View {
             Text("A lightweight, native macOS menu bar dashboard for Home Assistant.")
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            Link("homebar.jebrg.com", destination: URL(string: "https://homebar.jebrg.com")!)
             Text("Copyright © 2026 Jerome Berg")
                 .font(.caption)
                 .foregroundStyle(.secondary)

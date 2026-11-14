@@ -39,8 +39,12 @@ struct CustomizeSettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     if store.selectedIDs.isEmpty {
-                        ContentUnavailableView("No selected entities", systemImage: "checklist",
-                            description: Text("Add entities to customize their order and names."))
+                        ContentUnavailableView {
+                            Text("No selected entities")
+                        } description: {
+                            Text("Add entities to customize their order and names.")
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         EntityCustomizationTable(store: store, entities: store.selectedEntities) { entity in
                             draftName = entity.name

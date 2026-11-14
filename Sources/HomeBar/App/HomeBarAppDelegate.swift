@@ -8,12 +8,15 @@ final class HomeBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     private var onboardingWindow: NSWindow?
     private let completedKey = "onboardingCompleted"
 
-    /** Show setup after launch unless onboarding was dismissed or credentials already exist. */
+    /** Show setup on first launch or when --show-onboarding is supplied. */
     func applicationDidFinishLaunching(_ notification: Notification) {
-        guard !UserDefaults.standard.bool(forKey: completedKey), let connection else { return }
-        guard !connection.hasSavedToken else {
-            UserDefaults.standard.set(true, forKey: completedKey)
-            return
+        guard let connection else { return }
+        if !ProcessInfo.processInfo.arguments.contains("--show-onboarding") {
+            guard !UserDefaults.standard.bool(forKey: completedKey) else { return }
+            guard !connection.hasSavedToken else {
+                UserDefaults.standard.set(true, forKey: completedKey)
+                return
+            }
         }
 
         let window = NSWindow(

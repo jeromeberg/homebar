@@ -6,6 +6,8 @@
 - Added climate modes and presets selection, and cooling indicator.
 - Remember dashboard preferences (entities, name, order) per server.
 - Automatically migrate existing dashboard entities.
+- Added a `--show-onboarding` launch flag for debugging.
+- Various small improvements and fixes.
 
 ## [1.1]
 
