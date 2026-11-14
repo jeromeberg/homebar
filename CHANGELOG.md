@@ -8,6 +8,7 @@
 - Automatically migrate existing dashboard entities.
 - Added a `--show-onboarding` launch flag for debugging.
 - Various small improvements and fixes.
+- Added "last updated" tooltip over values.
 
 ## [1.1]
 

@@ -26,6 +26,30 @@ struct HAState: Decodable {
     let entity_id: String
     var state: String
     var attributes: EntityAttributes
+    var lastUpdated: Date?
+
+    private enum CodingKeys: String, CodingKey {
+        case entity_id, state, attributes, last_updated
+    }
+
+    /** Decode a state snapshot and its optional Home Assistant update timestamp. */
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        entity_id = try values.decode(String.self, forKey: .entity_id)
+        state = try values.decode(String.self, forKey: .state)
+        attributes = try values.decode(EntityAttributes.self, forKey: .attributes)
+        lastUpdated = Self.updateDate(try values.decodeIfPresent(String.self, forKey: .last_updated))
+    }
+
+    /** Parse an optional ISO 8601 timestamp, with or without fractional seconds. */
+    private static func updateDate(_ value: String?) -> Date? {
+        guard let value else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value)
+    }
 
     /** Create a state from a normal state object or compressed subscription addition. */
     init(id: String, payload: [String: Any], compressed: Bool) throws {
@@ -36,12 +60,20 @@ struct HAState: Decodable {
         entity_id = id
         state = value
         self.attributes = try JSONDecoder().decode(EntityAttributes.self, from: JSONSerialization.data(withJSONObject: attributes))
+        if compressed {
+            lastUpdated = ((payload["lu"] ?? payload["lc"]) as? Double).map { Date(timeIntervalSince1970: $0) }
+        } else {
+            lastUpdated = Self.updateDate(payload["last_updated"] as? String)
+        }
     }
 
     /** Merge changed state fields and attribute additions/removals from a compressed diff. */
     mutating func apply(_ diff: [String: Any]) {
         let additions = diff["+"] as? [String: Any] ?? [:]
         if let value = additions["s"] as? String { state = value }
+        if let timestamp = (additions["lu"] ?? additions["lc"]) as? Double {
+            lastUpdated = Date(timeIntervalSince1970: timestamp)
+        }
         guard let data = try? JSONEncoder().encode(attributes),
               var merged = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
         for (key, value) in additions["a"] as? [String: Any] ?? [:] { merged[key] = value }
@@ -57,6 +89,7 @@ public struct HAEntity: Identifiable, Equatable {
     public let areaID: String?
     public let room: String
     public let state: String
+    public let lastUpdated: Date?
     public let unit: String?
     public let deviceClass: String?
     public let isHidden: Bool

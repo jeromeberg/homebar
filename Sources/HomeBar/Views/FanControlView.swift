@@ -11,6 +11,7 @@ struct FanControlView: View {
             if entity.attributes.supportsFanSpeed {
                 ControlSliderView(title: "Speed", value: entity.attributes.percentage,
                                   range: 0...100, unit: "%") { await send(.percentage($0)) }
+                    .help(entity.updateHelp)
             }
             if !entity.attributes.fanPresets.isEmpty {
                 Picker("Mode", selection: Binding(
@@ -33,6 +34,7 @@ struct FanControlView: View {
                 .disabled(pendingPreset)
                 .controlSize(.small)
                 .font(.caption)
+                .help(entity.updateHelp)
             }
         }
     }

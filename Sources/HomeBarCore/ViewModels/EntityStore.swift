@@ -42,7 +42,8 @@ public final class EntityStore {
                 name: localNames[id] ?? entry?.name ?? state?.attributes.friendly_name ?? entry?.original_name
                     ?? id.split(separator: ".").last.map { $0.replacingOccurrences(of: "_", with: " ").capitalized } ?? id,
                 areaID: area?.area_id, room: area?.name ?? "Other",
-                state: state?.state ?? "unavailable", unit: state?.attributes.unit_of_measurement,
+                state: state?.state ?? "unavailable", lastUpdated: state?.lastUpdated,
+                unit: state?.attributes.unit_of_measurement,
                 deviceClass: state?.attributes.device_class,
                 isHidden: entry?.disabled_by != nil || entry?.hidden_by != nil
                     || entry?.entity_category == "diagnostic" || device?.disabled_by != nil,

@@ -146,6 +146,7 @@ private struct EntityCustomizationTable: NSViewRepresentable {
             let entity = entities[row]
             let label = NSTextField(labelWithString: "")
             label.stringValue = "\(entity.name)\n\(entity.stateLabel)"
+            label.toolTip = entity.updateHelp
             label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
             label.lineBreakMode = .byTruncatingTail
             label.maximumNumberOfLines = 2

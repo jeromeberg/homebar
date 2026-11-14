@@ -23,19 +23,21 @@ struct ClimateControlView: View {
                     Image(systemName: "flame.fill")
                         .foregroundStyle(.orange)
                         .accessibilityLabel("Heating")
-                        .help("Heating")
+                        .help("Heating\n\(entity.updateHelp)")
                 } else if entity.isCooling {
                     Image(systemName: "snowflake")
                         .foregroundStyle(.blue)
                         .accessibilityLabel("Cooling")
-                        .help("Cooling")
+                        .help("Cooling\n\(entity.updateHelp)")
                 }
                 if entity.isAvailable {
                     Text(temperatureLabel(entity.attributes.current_temperature))
                         .foregroundStyle(.secondary).monospacedDigit()
                         .accessibilityLabel("Current temperature")
+                        .help(entity.updateHelp)
                 } else {
                     Text(entity.stateLabel).foregroundStyle(.secondary)
+                        .help(entity.updateHelp)
                 }
             }
             HStack(spacing: 10) {
@@ -50,6 +52,7 @@ struct ClimateControlView: View {
                         .monospacedDigit()
                         .frame(minWidth: 58)
                         .accessibilityLabel("Target temperature")
+                        .help(entity.updateHelp)
                     adjustmentButton(increasing: true)
                 }
                 .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
@@ -106,6 +109,7 @@ struct ClimateControlView: View {
         .font(.caption)
         .padding(.leading, 30)
         .disabled(!controlsEnabled)
+        .help(entity.updateHelp)
     }
 
     /** Return a readable label for a reported mode or preset without changing its service value. */

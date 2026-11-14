@@ -21,6 +21,62 @@ struct EntityTests {
     }
 
     @Test
+    /** Retain ISO timestamps from snapshots and legacy events, including optional fractional seconds. */
+    func sensorUpdateTimeFromNormalStates() throws {
+        let (store, _) = store()
+        try store.load(json(#"[{"entity_id":"sensor.temperature","state":"21","attributes":{},"last_changed":"2026-11-14T09:00:00+00:00","last_updated":"2026-11-14T10:00:00.123456+00:00"}]"#), command: "get_states")
+        let initial = try #require(store.entities.first?.lastUpdated)
+        #expect(abs(initial.timeIntervalSince1970 - 1_794_650_400.123456) < 0.001)
+
+        try store.applyLegacy(["data": ["entity_id": "sensor.temperature", "new_state": [
+            "state": "21", "attributes": [:], "last_updated": "2026-11-14T12:00:00+01:00"
+        ]]])
+        #expect(store.entities.first?.lastUpdated == Date(timeIntervalSince1970: 1_794_654_000))
+    }
+
+    @Test
+    /** Track compressed update times, using last_changed when last_updated is omitted. */
+    func sensorUpdateTimeFromCompressedStates() throws {
+        let (store, _) = store()
+        try store.applyCompressed(["a": ["sensor.temperature": [
+            "s": "21", "a": [:], "lc": 1_000.0, "lu": 2_000.5
+        ]]], initial: true)
+        #expect(store.entities.first?.lastUpdated == Date(timeIntervalSince1970: 2_000.5))
+
+        try store.applyCompressed(["c": ["sensor.temperature": ["+": ["lu": 3_000.0]]]], initial: false)
+        #expect(store.entities.first?.state == "21")
+        #expect(store.entities.first?.lastUpdated == Date(timeIntervalSince1970: 3_000))
+
+        try store.applyCompressed(["c": ["sensor.temperature": ["+": ["s": "22", "lc": 4_000.0]]]], initial: false)
+        #expect(store.entities.first?.lastUpdated == Date(timeIntervalSince1970: 4_000))
+        try store.applyCompressed(["c": ["sensor.temperature": ["+": ["a": ["friendly_name": "Temperature"]]]]], initial: false)
+        #expect(store.entities.first?.lastUpdated == Date(timeIntervalSince1970: 4_000))
+
+        store.disconnected()
+        #expect(store.entities.first?.lastUpdated == Date(timeIntervalSince1970: 4_000))
+        try store.applyCompressed(["a": ["sensor.temperature": [
+            "s": "23", "a": [:], "lc": 5_000.0
+        ]]], initial: true)
+        #expect(store.entities.first?.lastUpdated == Date(timeIntervalSince1970: 5_000))
+    }
+
+    @Test
+    /** Leave missing or malformed timestamps unavailable without losing the sensor value. */
+    func sensorUpdateTimeUnavailable() throws {
+        let (store, _) = store()
+        try store.load(json(#"[{"entity_id":"sensor.temperature","state":"21","attributes":{}},{"entity_id":"sensor.humidity","state":"50","attributes":{},"last_updated":"invalid"}]"#), command: "get_states")
+        #expect(store.entities.count == 2)
+        #expect(store.entities.allSatisfy { $0.lastUpdated == nil })
+        try store.applyCompressed(["a": ["sensor.temperature": ["s": "22", "a": [:]]]], initial: true)
+        #expect(store.entities.first?.lastUpdated == nil)
+        try store.applyLegacy(["data": ["entity_id": "sensor.temperature", "new_state": [
+            "state": "23", "attributes": [:], "last_updated": "invalid"
+        ]]])
+        #expect(store.entities.first?.state == "23")
+        #expect(store.entities.first?.lastUpdated == nil)
+    }
+
+    @Test
     /** Resolve direct and device rooms, friendly names, units, filtering, and unregistered states. */
     func discoveryAndFiltering() throws {
         let (store, _) = store()

@@ -16,6 +16,7 @@ struct EntityRowView: View {
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
                 .lineLimit(1)
+                .help(entity.updateHelp)
         }
         .font(.subheadline)
         .padding(.vertical, 4)

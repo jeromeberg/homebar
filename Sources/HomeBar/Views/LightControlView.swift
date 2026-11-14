@@ -10,10 +10,12 @@ struct LightControlView: View {
             if entity.attributes.supportsBrightness {
                 ControlSliderView(title: "Brightness", value: entity.attributes.brightnessPercent,
                                   range: 0...100, unit: "%") { await send(.brightness($0)) }
+                    .help(entity.updateHelp)
             }
             if let range = entity.attributes.temperatureRange {
                 ControlSliderView(title: "Temperature", value: entity.attributes.color_temp_kelvin,
                                   range: range, unit: " K") { await send(.temperature($0)) }
+                    .help(entity.updateHelp)
             }
         }
     }

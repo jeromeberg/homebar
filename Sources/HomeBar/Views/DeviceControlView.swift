@@ -68,7 +68,10 @@ struct DeviceHeaderView: View {
                 .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
                 .accessibilityHint(isExpanded ? "Hide controls" : "Show controls")
             }
-            if !entity.isAvailable { Text(entity.stateLabel).foregroundStyle(.secondary) }
+            if !entity.isAvailable {
+                Text(entity.stateLabel).foregroundStyle(.secondary)
+                    .help(entity.updateHelp)
+            }
             Toggle(entity.stateLabel, isOn: Binding(
                 get: { entity.state == "on" },
                 set: { value in
@@ -84,6 +87,7 @@ struct DeviceHeaderView: View {
             .controlSize(.small)
             .disabled(pending || !canToggle)
             .accessibilityLabel(entity.name)
+            .help(entity.updateHelp)
         }
         .font(.subheadline)
     }
