@@ -4,6 +4,8 @@ import SwiftUI
 struct ClimateControlView: View {
     let entity: HAEntity
     let connection: ConnectionViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isExpanded = false
     @State private var pending = false
     @State private var requestedTarget: Double?
     @State private var error: String?
@@ -14,11 +16,28 @@ struct ClimateControlView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Image(systemName: entity.symbol)
-                    .foregroundStyle(.secondary).frame(width: 20)
-                    .accessibilityHidden(true)
-                Text(entity.name).lineLimit(2)
-                Spacer(minLength: 0)
+                Button {
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.2)) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: entity.symbol)
+                            .foregroundStyle(.secondary).frame(width: 20)
+                            .accessibilityHidden(true)
+                        Text(entity.name).lineLimit(2)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(entity.name)
+                .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+                .accessibilityHint(isExpanded ? "Hide controls" : "Show controls")
                 if entity.isHeating {
                     Image(systemName: "flame.fill")
                         .foregroundStyle(.orange)
@@ -40,29 +59,28 @@ struct ClimateControlView: View {
                         .help(entity.updateHelp)
                 }
             }
-            HStack(spacing: 10) {
-                Text("Target")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
+            if isExpanded {
                 HStack(spacing: 0) {
                     adjustmentButton(increasing: false)
                     Text(temperatureLabel(target))
-                        .font(.subheadline.weight(.semibold))
+                        .font(.title3.weight(.semibold))
                         .monospacedDigit()
-                        .frame(minWidth: 58)
+                        .frame(minWidth: 72)
                         .accessibilityLabel("Target temperature")
                         .help(entity.updateHelp)
                     adjustmentButton(increasing: true)
                 }
                 .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
-            }
-            .padding(.leading, 30)
-            if let modes = entity.attributes.hvac_modes, !modes.isEmpty {
-                modePicker("Mode", current: entity.state, options: modes) { .hvacMode($0) }
-            }
-            if !entity.attributes.climatePresets.isEmpty {
-                modePicker("Preset", current: entity.attributes.preset_mode, options: entity.attributes.climatePresets) { .preset($0) }
+                .frame(maxWidth: .infinity, alignment: .center)
+                if let modes = entity.attributes.hvac_modes, !modes.isEmpty {
+                    modePicker("Mode", current: entity.state, options: modes) { .hvacMode($0) }
+                        .fixedSize()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                if !entity.attributes.climatePresets.isEmpty {
+                    modePicker("Preset", current: entity.attributes.preset_mode, options: entity.attributes.climatePresets) { .preset($0) }
+                        .padding(.leading, 30)
+                }
             }
             if let error {
                 Text(error).font(.caption).foregroundStyle(.secondary)
@@ -107,7 +125,6 @@ struct ClimateControlView: View {
         .pickerStyle(.menu)
         .controlSize(.small)
         .font(.caption)
-        .padding(.leading, 30)
         .disabled(!controlsEnabled)
         .help(entity.updateHelp)
     }
@@ -146,8 +163,8 @@ struct ClimateControlView: View {
             }
         } label: {
             Image(systemName: increasing ? "plus" : "minus")
-                .font(.system(size: 11, weight: .semibold))
-                .frame(width: 30, height: 28)
+                .font(.system(size: 14, weight: .semibold))
+                .frame(width: 40, height: 36)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

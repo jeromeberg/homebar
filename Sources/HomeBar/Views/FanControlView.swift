@@ -34,6 +34,8 @@ struct FanControlView: View {
                 .disabled(pendingPreset)
                 .controlSize(.small)
                 .font(.caption)
+                .fixedSize()
+                .frame(maxWidth: .infinity, alignment: .center)
                 .help(entity.updateHelp)
             }
         }
