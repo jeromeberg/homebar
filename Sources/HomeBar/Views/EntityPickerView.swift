@@ -25,8 +25,12 @@ struct EntityPickerView: View {
             }
             let groups = store.groups(search: search, showHidden: showHidden)
             if groups.isEmpty && !store.isLoading {
-                ContentUnavailableView("No entities found", systemImage: "line.3.horizontal.decrease",
-                    description: Text("Only lights, fans, sensors, switches, and thermostats are supported. Try another search or include hidden entities."))
+                ContentUnavailableView {
+                    Text("No entities found")
+                } description: {
+                    Text("Only lights, fans, sensors, switches, and thermostats are supported. Try another search or include hidden entities.")
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
                     ForEach(groups) { group in
