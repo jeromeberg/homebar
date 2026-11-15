@@ -34,7 +34,7 @@ public final class ConnectionViewModel {
     /** Load the saved server, configure optional system recovery signals, and leave connection startup explicit. */
     public init(defaults: UserDefaults = .standard, store: any TokenStore = KeychainService(),
                 observeSystem: Bool = true,
-                refreshStore: any TokenStore = KeychainService(service: "com.jeromeberg.HomeBar.refresh-token"),
+                refreshStore: any TokenStore = KeychainService(service: "com.jeromeberg.homebar.refresh-token"),
                 auth: any HomeAssistantAuthenticating = HomeAssistantAuth(), clientFactory: @escaping () -> HomeAssistantClient = { HomeAssistantClient() }) {
         self.entities = EntityStore(defaults: defaults)
         self.defaults = defaults

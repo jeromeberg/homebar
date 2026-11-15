@@ -14,7 +14,7 @@ public protocol TokenStore {
 public struct KeychainService: TokenStore {
     private let service: String
     /** Create the app’s Keychain token store. */
-    public init(service: String = "com.jeromeberg.HomeBar.access-token") { self.service = service }
+    public init(service: String = "com.jeromeberg.homebar.access-token") { self.service = service }
 
     /** Load the token for a normalized server URL, returning nil when no item exists. */
     public func read(for server: String) throws -> String? {
