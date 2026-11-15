@@ -3,6 +3,8 @@
 ## [1.3]
 
 - Fixed toggle state handling while waiting on Home Assistant.
+- Changed bundle identifier. Existing users may need to configure their preferences again.
+- HomeBar is now signed and notarized by Apple! 🎉
 
 ## [1.2]
 

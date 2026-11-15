@@ -11,8 +11,11 @@ permissions:
 jobs:
   release:
     runs-on: macos-26
+    timeout-minutes: 45
     env:
       SPARKLE_PUBLIC_ED_KEY: ${{ vars.SPARKLE_PUBLIC_ED_KEY }}
+      APPLE_SIGNING_IDENTITY: ${{ vars.APPLE_SIGNING_IDENTITY }}
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
 
     steps:
       - name: Checkout
@@ -38,27 +41,100 @@ jobs:
           Path("updates/HomeBar-macOS-arm64.md").write_text(notes[0] + "\n", encoding="utf-8")
           PY
 
-      - name: Validate update signing configuration
+      - name: Validate signing configuration
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          test -n "$SPARKLE_PUBLIC_ED_KEY" || { echo "Set the SPARKLE_PUBLIC_ED_KEY repository variable."; exit 1; }
-          test -n "$SPARKLE_PRIVATE_KEY" || { echo "Set the SPARKLE_PRIVATE_KEY repository secret."; exit 1; }
+          for name in SPARKLE_PUBLIC_ED_KEY APPLE_SIGNING_IDENTITY APPLE_TEAM_ID; do
+            test -n "${!name}" || { echo "Set the $name repository variable."; exit 1; }
+          done
+          for name in SPARKLE_PRIVATE_KEY APPLE_CERTIFICATE_P12_BASE64 APPLE_CERTIFICATE_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD; do
+            test -n "${!name}" || { echo "Set the $name repository secret."; exit 1; }
+          done
 
       - name: Test
-        run: ./test.sh
+        run: ./test.sh --build-system native --sdk "$(xcrun --show-sdk-path)"
 
       - name: Build Release
         run: ./build.sh
 
-      - name: Package application
+      - name: Import Apple signing certificate
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          umask 077
+          KEYCHAIN="$RUNNER_TEMP/homebar-signing.keychain-db"
+          CERTIFICATE="$RUNNER_TEMP/homebar-signing.p12"
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 32)
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          printf '%s' "$APPLE_CERTIFICATE_P12_BASE64" | base64 --decode > "$CERTIFICATE"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$CERTIFICATE" -P "$APPLE_CERTIFICATE_PASSWORD" -k "$KEYCHAIN" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+          security list-keychains -d user -s "$KEYCHAIN" "$HOME/Library/Keychains/login.keychain-db"
+          rm -f "$CERTIFICATE"
+
+      - name: Sign application and Sparkle
         run: |
           APP=".build/HomeBar.app"
+          FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
+          SPARKLE="$FRAMEWORK/Versions/B"
           lipo "$APP/Contents/MacOS/HomeBar" -verify_arch arm64
+          xcrun vtool -show-build "$APP/Contents/MacOS/HomeBar" | tee "$RUNNER_TEMP/homebar-build-version.txt"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+
+          metadata = Path(os.environ["RUNNER_TEMP"], "homebar-build-version.txt").read_text()
+          sdk = re.search(r"^\s*sdk (\d+)", metadata, re.MULTILINE)
+          if sdk is None or int(sdk[1]) < 26:
+              raise SystemExit("Expected macOS SDK 26 or later to preserve the native appearance.")
+          PY
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${GITHUB_REF_NAME#v}" "$APP/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "$APP/Contents/Info.plist"
-          codesign --force --sign - "$APP"
+          codesign --force --timestamp --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$SPARKLE/XPCServices/Installer.xpc"
+          codesign --force --timestamp --options runtime --sign "$APPLE_SIGNING_IDENTITY" --preserve-metadata=entitlements "$SPARKLE/XPCServices/Downloader.xpc"
+          codesign --force --timestamp --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$SPARKLE/Autoupdate"
+          codesign --force --timestamp --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$SPARKLE/Updater.app"
+          codesign --force --timestamp --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$FRAMEWORK"
+          codesign --force --timestamp --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
 
+      - name: Notarize application
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            .build/HomeBar.app "$RUNNER_TEMP/HomeBar-notarization.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/HomeBar-notarization.zip" \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --wait --timeout 30m --output-format json > "$RUNNER_TEMP/notarization.json"
+          cat "$RUNNER_TEMP/notarization.json"
+          if ! python3 -c 'import json, sys; sys.exit(json.load(open(sys.argv[1]))["status"] != "Accepted")' "$RUNNER_TEMP/notarization.json"; then
+            SUBMISSION_ID=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["id"])' "$RUNNER_TEMP/notarization.json")
+            xcrun notarytool log "$SUBMISSION_ID" \
+              --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_APP_SPECIFIC_PASSWORD"
+            exit 1
+          fi
+
+      - name: Staple and package application
+        run: |
+          APP=".build/HomeBar.app"
+          xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          spctl --assess --type execute --verbose=2 "$APP"
           mkdir -p updates
           ditto -c -k --sequesterRsrc --keepParent \
             "$APP" updates/HomeBar-macOS-arm64.zip
@@ -99,3 +175,12 @@ jobs:
           draft: false
           make_latest: "true"
           generate_release_notes: false
+
+      - name: Remove Apple signing credentials
+        if: always()
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/homebar-signing.keychain-db"
+          if [ -f "$KEYCHAIN" ]; then
+            security delete-keychain "$KEYCHAIN"
+          fi
+          rm -f "$RUNNER_TEMP/homebar-signing.p12" "$RUNNER_TEMP/HomeBar-notarization.zip"

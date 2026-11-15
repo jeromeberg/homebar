@@ -3,6 +3,7 @@ set -eu
 cd "$(dirname "$0")"
 export CLANG_MODULE_CACHE_PATH="$PWD/.build/ModuleCache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build/ModuleCache"
+set -- --build-system native --sdk "$(xcrun --show-sdk-path)" "$@"
 swift build -c release --disable-sandbox --cache-path "$PWD/.build/cache" "$@"
 bin_path=$(swift build -c release --show-bin-path --disable-sandbox --cache-path "$PWD/.build/cache" "$@")
 app="$PWD/.build/HomeBar.app"

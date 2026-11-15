@@ -7,6 +7,15 @@ A lightweight, native macOS menu bar dashboard for Home Assistant.
 
 <img src="docs/light.png" alt="HomeBar screenshot" width="386">
 
+## Installation
+
+> [!NOTE]
+> HomeBar is now signed and notarized by Apple! 🎉
+
+**Download the latest version from [releases](https://github.com/jeromeberg/homebar/releases/latest) page.**
+
+Download the ZIP file, extract it, and move `HomeBar.app` to your Applications folder.
+
 ## Features
 
 - Lightweight and minimal.
@@ -20,21 +29,6 @@ A lightweight, native macOS menu bar dashboard for Home Assistant.
   - Plugs and switches
   - Climate control (modes, presets, target temperature, heating/cooling indicators)
   - Sensors
-
-## Installation
-
-Download the latest version from [releases](https://github.com/jeromeberg/homebar/releases/latest) page.
-
-**Installation:** Download the ZIP file, extract it, and move `HomeBar.app` to your Applications folder.
-
-**Note**: HomeBar is not notarized by Apple, so macOS may block it on first launch.
-
-To open HomeBar (only required once):
-
-1. Try opening `HomeBar.app`.
-2. Go to **System Settings → Privacy & Security**.
-3. Scroll down to **Security** and click **Open Anyway**.
-4. Confirm when prompted.
 
 ## Instructions
 
