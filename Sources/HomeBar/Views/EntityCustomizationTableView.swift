@@ -2,8 +2,8 @@ import AppKit
 
 @MainActor
 final class EntityCustomizationTableView: NSTableView {
-    static let rowHeightWithSpacing: CGFloat = 56
-    static let rowSpacing: CGFloat = 2
+    static let rowHeightWithSpacing: CGFloat = 44
+    static let rowSpacing: CGFloat = 0
 
     var moveRow: ((Int, Int) -> Void)?
     var renameRow: ((Int) -> Void)?
@@ -11,9 +11,15 @@ final class EntityCustomizationTableView: NSTableView {
     private var insertionRow: Int?
     private var startPoint = NSPoint.zero
 
-    /** Route row clicks to the table so labels and handles use the same mouse tracking. */
+    /** Let rename buttons receive clicks while routing labels and handles through row mouse tracking. */
     override func hitTest(_ point: NSPoint) -> NSView? {
-        super.hitTest(point) == nil ? nil : self
+        let hit = super.hitTest(point)
+        var view = hit
+        while let candidate = view, candidate !== self {
+            if candidate is NSButton { return hit }
+            view = candidate.superview
+        }
+        return hit == nil ? nil : self
     }
 
     /** Start row movement on a click, or request renaming on a double-click. */

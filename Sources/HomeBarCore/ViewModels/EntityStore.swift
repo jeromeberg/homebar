@@ -38,11 +38,12 @@ public final class EntityStore {
             let device = entry?.device_id.flatMap { devices[$0] }
             let areaID = entry?.area_id ?? device?.area_id
             let area = areaID.flatMap { areas[$0] }
-            let name = [localNames[id], entry?.name, state?.attributes.friendly_name, entry?.original_name]
+            let defaultName = [entry?.name, state?.attributes.friendly_name, entry?.original_name]
                 .compactMap { $0 }.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                ?? id.split(separator: ".").last.map { $0.replacingOccurrences(of: "_", with: " ").capitalized } ?? id
             return HAEntity(id: id,
-                name: name
-                    ?? id.split(separator: ".").last.map { $0.replacingOccurrences(of: "_", with: " ").capitalized } ?? id,
+                name: localNames[id].flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 } ?? defaultName,
+                defaultName: defaultName,
                 areaID: area?.area_id, room: area?.name ?? "Other",
                 state: state?.state ?? "unavailable", lastUpdated: state?.lastUpdated,
                 unit: state?.attributes.unit_of_measurement,

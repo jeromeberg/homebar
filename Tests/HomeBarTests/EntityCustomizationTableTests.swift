@@ -19,6 +19,38 @@ struct EntityCustomizationTableTests {
     }
 
     @Test
+    /** Keep the pencil clickable and rename its current row without starting a reorder. */
+    func pencilRenamesCurrentRow() throws {
+        let defaults = UserDefaults(suiteName: "HomeBarPencilTests.\(UUID().uuidString)")!
+        let store = EntityStore(defaults: defaults)
+        store.setSelected("light.desk", selected: true)
+        store.setSelected("fan.bedroom", selected: true)
+        let coordinator = EntityCustomizationTable.Coordinator(store: store, entities: store.selectedEntities)
+        let table = EntityCustomizationTableView(frame: NSRect(x: 0, y: 0, width: 340, height: 100))
+        table.addTableColumn(NSTableColumn(identifier: .init("entity")))
+        table.rowHeight = 44
+        table.dataSource = coordinator
+        table.delegate = coordinator
+        let scroll = NSScrollView(frame: table.frame)
+        scroll.documentView = table
+        table.reloadData()
+        let cell = try #require(table.view(atColumn: 0, row: 1, makeIfNecessary: true))
+        cell.layoutSubtreeIfNeeded()
+        let pencil = try #require(cell.subviews.compactMap { $0 as? NSButton }.first)
+        var renamedRow: Int?
+        var moves = 0
+        table.renameRow = { renamedRow = $0 }
+        table.moveRow = { _, _ in moves += 1 }
+        let point = table.superview!.convert(NSPoint(x: pencil.bounds.midX, y: pencil.bounds.midY), from: pencil)
+        let hit = table.hitTest(point)
+        #expect(hit === pencil || hit?.isDescendant(of: pencil) == true)
+        pencil.performClick(nil)
+        #expect(renamedRow == 1)
+        #expect(moves == 0)
+        withExtendedLifetime((coordinator, scroll)) {}
+    }
+
+    @Test
     /** Drag a row down and up using real mouse event handlers, then verify the persisted order. */
     func mouseReleaseSavesOrder() throws {
         let defaults = UserDefaults(suiteName: "HomeBarReorderTests.\(UUID().uuidString)")!

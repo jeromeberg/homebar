@@ -86,6 +86,7 @@ struct HAState: Decodable {
 public struct HAEntity: Identifiable, Equatable {
     public let id: String
     public let name: String
+    public let defaultName: String
     public let areaID: String?
     public let room: String
     public let state: String

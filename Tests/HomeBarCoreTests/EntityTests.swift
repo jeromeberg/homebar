@@ -21,6 +21,23 @@ struct EntityTests {
     }
 
     @Test
+    /** Keep the Home Assistant name available while saving and resetting a local display name. */
+    func defaultNameSurvivesLocalRename() throws {
+        let (store, defaults) = store()
+        store.setSelected("light.desk", selected: true)
+        defaults.set(["light.desk": " \n"], forKey: "localEntityNames")
+        #expect(EntityStore(defaults: defaults).selectedEntities.first?.name == "Desk")
+        #expect(store.selectedEntities.first?.defaultName == "Desk")
+        try store.load(json(#"[{"entity_id":"light.desk","name":"Desk light"}]"#), command: "config/entity_registry/list")
+        store.setLocalName("Reading lamp", for: "light.desk")
+        #expect(store.selectedEntities.first?.name == "Reading lamp")
+        #expect(store.selectedEntities.first?.defaultName == "Desk light")
+        store.setLocalName("", for: "light.desk")
+        #expect(store.selectedEntities.first?.name == "Desk light")
+        #expect(store.selectedEntities.first?.defaultName == "Desk light")
+    }
+
+    @Test
     /** Retain ISO timestamps from snapshots and legacy events, including optional fractional seconds. */
     func sensorUpdateTimeFromNormalStates() throws {
         let (store, _) = store()
