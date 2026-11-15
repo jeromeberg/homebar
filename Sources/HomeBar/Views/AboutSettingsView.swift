@@ -14,7 +14,7 @@ struct AboutSettingsView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            Text("A lightweight, native macOS menu bar dashboard for Home Assistant.")
+            Text("A lightweight menu bar dashboard for Home Assistant.")
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Link("Privacy Policy", destination: URL(string: "https://homebar.jebrg.com/privacy.html")!)
