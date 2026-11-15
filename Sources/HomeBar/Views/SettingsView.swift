@@ -23,15 +23,33 @@ struct SettingsView: View {
                 .tabItem { Label("Customize", systemImage: "slider.horizontal.3") }
                 .tag(SettingsTab.customize)
             VStack(alignment: .leading, spacing: 16) {
-                Text(connection.state.label).font(.headline)
-                if let detail = connection.detail {
-                    Text(detail).font(.callout).foregroundStyle(.secondary)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(spacing: 8) {
+                            Text(connection.state.label).font(.headline)
+                            ConnectionStatusIndicator(state: connection.state)
+                                .accessibilityHidden(true)
+                        }
+                        if let detail = connection.detail {
+                            Text(detail).font(.callout).foregroundStyle(.secondary)
+                        }
+                        ConnectionSettingsView(connection: connection)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                ConnectionSettingsView(connection: connection)
-                if connection.state == .connected || connection.state.isBusy {
-                    Button("Disconnect", action: connection.disconnect)
+                .scrollBounceBehavior(.basedOnSize)
+                HStack {
+                    if connection.state == .connected {
+                        Button("Disconnect", action: connection.disconnect)
+                            .help("Disconnect until you reconnect or restart HomeBar.")
+                    }
+                    if connection.hasSavedToken && !connection.state.isBusy {
+                        Button(connection.hasSavedRefreshToken ? "Sign Out" : "Forget Token", action: connection.signOut)
+                            .help(connection.hasSavedRefreshToken
+                                  ? "Remove saved credentials and revoke this Home Assistant session. Sign out to switch accounts or servers."
+                                  : "Remove the saved token from HomeBar to switch accounts or servers. The token remains valid in Home Assistant.")
+                    }
                 }
-                Spacer()
             }
             .padding(24)
             .tabItem { Label("Server", systemImage: "network") }

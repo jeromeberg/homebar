@@ -9,25 +9,13 @@ struct MenuBarView: View {
     @AppStorage("menuMaxHeight") private var menuMaxHeight = 400.0
     @State private var entityListHeight: CGFloat = 1
 
-    private var connectionColor: Color {
-        switch connection.state {
-        case .connected: .green
-        case .connecting, .reconnecting: .orange
-        case .disconnected: .gray
-        case .failed: .red
-        }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 Label("HomeBar", systemImage: "house.fill").font(.headline)
                 Spacer()
-                Circle()
-                    .fill(connectionColor)
-                    .frame(width: 8, height: 8)
+                ConnectionStatusIndicator(state: connection.state)
                     .help([connection.state.label, connection.detail].compactMap { $0 }.joined(separator: "\n"))
-                    .accessibilityLabel(connection.state.label)
                 Button(action: openSettings) {
                     Image(systemName: "gearshape")
                 }
@@ -49,9 +37,9 @@ struct MenuBarView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         if connection.entities.selectedIDs.isEmpty {
-                            Text("You're all set! You can now add entities to your dashboard.")
+                            Text("Empty. You can add entities to your dashboard.")
                                 .font(.subheadline).foregroundStyle(.secondary)
-                            Button("Browse entities…") {
+                            Button("Pick entities") {
                                 settingsTab = .entities
                                 openSettings()
                             }

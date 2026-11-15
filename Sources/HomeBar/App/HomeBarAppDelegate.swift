@@ -1,10 +1,12 @@
 import AppKit
 import HomeBarCore
+import Observation
 import SwiftUI
 
-@MainActor
+@MainActor @Observable
 final class HomeBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var connection: ConnectionViewModel?
+    var settingsTab: SettingsTab = .entities
     private var onboardingWindow: NSWindow?
     private let completedKey = "onboardingCompleted"
 
@@ -28,7 +30,8 @@ final class HomeBarAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         window.title = "Welcome to HomeBar"
         window.isReleasedWhenClosed = false
         window.delegate = self
-        let contentView = NSHostingView(rootView: OnboardingView(connection: connection) { [weak self] in
+        @Bindable var delegate = self
+        let contentView = NSHostingView(rootView: OnboardingView(connection: connection, settingsTab: $delegate.settingsTab) { [weak self] in
             self?.onboardingWindow?.close()
         })
         window.contentView = contentView

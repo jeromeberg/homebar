@@ -174,7 +174,9 @@ struct AuthTests {
         #expect(legacy.writes == 0)
         #expect(legacy.tokens.isEmpty)
         #expect(auth.refreshes == 0)
+        #expect(model.hasSavedRefreshToken)
         model.disconnect()
+        #expect(model.hasSavedRefreshToken)
         model.restore()
         try await wait { model.state == .connected }
         #expect(auth.refreshes == 1)
@@ -189,8 +191,53 @@ struct AuthTests {
         try await wait { auth.revocations == 1 }
         #expect(refresh.tokens.isEmpty)
         #expect(!model.hasSavedToken)
+        #expect(!model.hasSavedRefreshToken)
         #expect(defaults.string(forKey: ConnectionViewModel.serverKey) == nil)
         #expect(model.state == .disconnected)
+    }
+
+    @Test(arguments: [false, true])
+    /** Reconnect with saved credentials despite form edits, then forget only the saved session. */
+    func reconnectSavedCredentials(browser: Bool) async throws {
+        let defaults = UserDefaults(suiteName: "HomeBarAuthTests.\(UUID().uuidString)")!
+        defaults.set("http://ha.local", forKey: ConnectionViewModel.serverKey)
+        let legacy = MemoryTokens()
+        let refresh = MemoryTokens()
+        if browser { refresh.tokens["http://ha.local"] = "saved-refresh" }
+        else { legacy.tokens["http://ha.local"] = "saved-token" }
+        let auth = FakeAuth()
+        var sockets: [ScriptedSocket] = []
+        let model = ConnectionViewModel(defaults: defaults, store: legacy, observeSystem: false,
+            refreshStore: refresh, auth: auth, clientFactory: { HomeAssistantClient(factory: { url in
+                #expect(url.host == "ha.local")
+                let socket = ScriptedSocket(frames)
+                sockets.append(socket)
+                return socket
+            }) })
+        model.restore()
+        try await wait { model.state == .connected }
+        #expect(model.hasSavedRefreshToken == browser)
+        model.disconnect()
+        #expect(model.hasSavedToken)
+        #expect(model.hasSavedRefreshToken == browser)
+        model.serverURL = "http://edited.local"
+        model.tokenInput = "edited-token"
+        model.reconnect()
+        try await wait { model.state == .connected }
+        #expect(model.serverURL == "http://ha.local")
+        #expect(sockets.count == 2)
+        let fields = try #require(JSONSerialization.jsonObject(with: sockets[1].sent[0]) as? [String: String])
+        #expect(fields["access_token"] == (browser ? "renewed-access" : "saved-token"))
+        #expect(auth.refreshes == (browser ? 2 : 0))
+        model.signOut()
+        if browser { try await wait { auth.revocations == 1 } }
+        else { #expect(auth.revocations == 0) }
+        #expect(model.state == .disconnected)
+        #expect(!model.hasSavedToken)
+        #expect(!model.hasSavedRefreshToken)
+        #expect(legacy.tokens.isEmpty)
+        #expect(refresh.tokens.isEmpty)
+        #expect(defaults.string(forKey: ConnectionViewModel.serverKey) == nil)
     }
 
     @Test
@@ -212,6 +259,7 @@ struct AuthTests {
         model.recover()
         #expect(auth.refreshes == 1)
         #expect(!model.hasSavedToken)
+        #expect(!model.hasSavedRefreshToken)
         #expect(opened)
         model.disconnect()
     }

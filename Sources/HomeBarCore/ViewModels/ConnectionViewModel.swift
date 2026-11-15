@@ -12,6 +12,7 @@ public final class ConnectionViewModel {
     public private(set) var version: String?
     public private(set) var detail: String?
     public private(set) var hasSavedToken = false
+    public private(set) var hasSavedRefreshToken = false
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let store: any TokenStore
@@ -52,13 +53,23 @@ public final class ConnectionViewModel {
         do {
             if let refresh = try refreshStore.read(for: address.baseURL.absoluteString) {
                 hasSavedToken = true
+                hasSavedRefreshToken = true
                 start(address: address, token: "", save: false, refreshToken: refresh)
                 return
             }
             guard let token = try store.read(for: address.baseURL.absoluteString), !token.isEmpty else { return }
             hasSavedToken = true
+            hasSavedRefreshToken = false
             start(address: address, token: token, save: false)
         } catch { fail(.storage) }
+    }
+
+    /** Reconnect to the saved server with saved credentials, ignoring edited form values. */
+    public func reconnect() {
+        guard !state.isBusy, state != .connected,
+              let server = defaults.string(forKey: Self.serverKey) else { return }
+        serverURL = server
+        restore()
     }
 
     /** Open browser sign-in for the entered server and connect after a validated code exchange. */
@@ -95,11 +106,12 @@ public final class ConnectionViewModel {
             try store.remove(for: server)
             defaults.removeObject(forKey: Self.serverKey)
             hasSavedToken = false
+            hasSavedRefreshToken = false
             if let refresh {
                 login = Task { @MainActor [weak self] in
                     guard let self else { return }
                     do { try await self.auth.revoke(address: address, token: refresh) }
-                    catch { self.detail = "Signed out locally. Server revocation failed; remove the session in your Home Assistant profile." }
+                    catch { self.detail = "Signed out locally. You can revoke the session in your Home Assistant profile." }
                 }
             }
         } catch { fail(ConnectionError.sanitized(error)) }
@@ -196,6 +208,7 @@ public final class ConnectionViewModel {
                             self.pendingSave = false
                         }
                         self.hasSavedToken = true
+                        self.hasSavedRefreshToken = refreshToken != nil
                         self.tokenInput = ""
                         self.serverURL = address.baseURL.absoluteString
                         self.version = version
@@ -213,7 +226,11 @@ public final class ConnectionViewModel {
                         continue
                     }
                     if failure == .authentication, refreshToken != nil, !needsSave {
-                        do { try self.refreshStore.remove(for: address.baseURL.absoluteString); self.hasSavedToken = false }
+                        do {
+                            try self.refreshStore.remove(for: address.baseURL.absoluteString)
+                            self.hasSavedToken = false
+                            self.hasSavedRefreshToken = false
+                        }
                         catch { failure = .storage }
                     }
                     accessToken = refreshToken == nil ? token : ""

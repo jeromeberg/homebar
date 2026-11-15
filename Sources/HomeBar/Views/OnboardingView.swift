@@ -1,8 +1,11 @@
+import AppKit
 import HomeBarCore
 import SwiftUI
 
 struct OnboardingView: View {
     @Bindable var connection: ConnectionViewModel
+    @Binding var settingsTab: SettingsTab
+    @Environment(\.openSettings) private var openSettings
     let onFinish: () -> Void
 
     var body: some View {
@@ -18,12 +21,16 @@ struct OnboardingView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(connection.state.label).font(.subheadline.weight(.semibold))
+                HStack(spacing: 8) {
+                    Text(connection.state.label).font(.subheadline.weight(.semibold))
+                    ConnectionStatusIndicator(state: connection.state)
+                        .accessibilityHidden(true)
+                }
                 if let detail = connection.detail {
                     Text(detail).font(.callout).foregroundStyle(.secondary)
                 } else if connection.state == .connected {
-                    Text("HomeBar now lives in your menu bar. Click the house icon at the top your screen to open it!")
-                        .font(.body)
+                    Text("Click the house icon in your menu bar to open the dashboard.")
+                        .font(.callout).foregroundStyle(.secondary)
                 }
             }
 
@@ -33,12 +40,16 @@ struct OnboardingView: View {
 
             HStack {
                 Spacer()
+                Button("Set Up Later", action: onFinish)
                 if connection.state == .connected {
-                    Button("Done", action: onFinish)
-                        .buttonStyle(.borderedProminent)
-                        .keyboardShortcut(.defaultAction)
-                } else {
-                    Button("Set Up Later", action: onFinish)
+                    Button("Pick my entities") {
+                        settingsTab = .entities
+                        openSettings()
+                        onFinish()
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
                 }
             }
         }

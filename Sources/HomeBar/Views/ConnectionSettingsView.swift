@@ -66,17 +66,24 @@ struct ConnectionSettingsView: View {
                 }
             }
             HStack {
-                Button("Sign in with Home Assistant", action: connection.signIn)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(connection.state.isBusy)
+                if connection.hasSavedToken && connection.state != .connected {
+                    Button("Reconnect", action: connection.reconnect)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(connection.state.isBusy)
+                        .help("Reconnect to your saved server using saved credentials.")
+                } else {
+                    Button("Sign in with Home Assistant", action: connection.signIn)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(connection.state.isBusy || connection.state == .connected)
+                        .help(connection.state == .connected
+                              ? "Sign out or forget the saved token to switch accounts or servers."
+                              : "Sign in securely in your browser.")
+                }
                 if connection.state.isBusy {
                     Button("Cancel", action: connection.disconnect)
-                } else if connection.hasSavedToken {
-                    Button("Sign Out", action: connection.signOut)
+                        .help("Cancel the connection attempt while keeping saved credentials.")
                 }
             }
-            Text("Sign in securely in your browser.")
-                .font(.caption).foregroundStyle(.secondary)
             DisclosureGroup(isExpanded: $showingTokenEntry) {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 5) {
@@ -112,7 +119,7 @@ struct ConnectionSettingsView: View {
                         .disabled(connection.state.isBusy)
                 }
             } label: {
-                Button("Use an access token") {
+                Button("Use an access token instead") {
                     showingTokenEntry.toggle()
                 }
                 .buttonStyle(.plain)
