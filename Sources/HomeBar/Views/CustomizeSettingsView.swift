@@ -11,7 +11,7 @@ struct CustomizeSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Customize dashboard").font(.headline)
-            Text("Drag to reorder. Click the pencil to rename.")
+            Text("Drag to reorder. Click the pencil to rename. Hide entities from the dashboard.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if store.selectedIDs.isEmpty {
@@ -22,7 +22,7 @@ struct CustomizeSettingsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                EntityCustomizationTable(store: store, entities: store.selectedEntities) { entity in
+                EntityCustomizationTable(store: store, entities: store.selectedEntities, hiddenIDs: store.hiddenIDs) { entity in
                     draftName = entity.name
                     renamingEntity = entity
                 }
@@ -34,7 +34,7 @@ struct CustomizeSettingsView: View {
                         .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
                 }
             }
-            Text("Changes are saved locally in HomeBar.")
+            Text("Changes are saved locally.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -87,6 +87,7 @@ struct CustomizeSettingsView: View {
 struct EntityCustomizationTable: NSViewRepresentable {
     let store: EntityStore
     let entities: [HAEntity]
+    let hiddenIDs: Set<String>
     let renameEntity: (HAEntity) -> Void
 
     /** Create the native table's data source using the current store and displayed entities. */
@@ -124,15 +125,16 @@ struct EntityCustomizationTable: NSViewRepresentable {
         return scroll
     }
 
-    /** Refresh native rows when the selected order or entity values change. */
+    /** Refresh native rows when the selected order, visibility, or entity values change. */
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         guard let table = scroll.documentView as? EntityCustomizationTableView else { return }
         table.renameRow = { [coordinator = context.coordinator] row in
             guard coordinator.entities.indices.contains(row) else { return }
             renameEntity(coordinator.entities[row])
         }
-        guard context.coordinator.entities != entities else { return }
+        guard context.coordinator.entities != entities || context.coordinator.hiddenIDs != hiddenIDs else { return }
         context.coordinator.entities = entities
+        context.coordinator.hiddenIDs = hiddenIDs
         table.reloadData()
     }
 
@@ -140,11 +142,13 @@ struct EntityCustomizationTable: NSViewRepresentable {
     final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         let store: EntityStore
         var entities: [HAEntity]
+        var hiddenIDs: Set<String>
 
         /** Retain the selection store and the table's displayed entity snapshot. */
         init(store: EntityStore, entities: [HAEntity]) {
             self.store = store
             self.entities = entities
+            self.hiddenIDs = store.hiddenIDs
         }
 
         /** Return the number of selected entities displayed in the supplied table. */
@@ -160,7 +164,18 @@ struct EntityCustomizationTable: NSViewRepresentable {
             table.renameRow?(row)
         }
 
-        /** Create an icon, name hierarchy, rename button, and drag handle for the supplied row. */
+        /** Toggle dashboard visibility for the supplied button's current row and refresh its controls. */
+        @objc private func toggleVisibility(_ sender: NSButton) {
+            guard let table = sender.enclosingScrollView?.documentView as? EntityCustomizationTableView else { return }
+            let row = table.row(for: sender)
+            guard entities.indices.contains(row) else { return }
+            let id = entities[row].id
+            store.setHidden(id, hidden: !store.hiddenIDs.contains(id))
+            hiddenIDs = store.hiddenIDs
+            table.reloadData()
+        }
+
+        /** Create the name, visibility and rename buttons, icon, and drag handle for the supplied row. */
         func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
             let entity = entities[row]
             let label = NSTextField(labelWithString: entity.name)
@@ -187,11 +202,19 @@ struct EntityCustomizationTable: NSViewRepresentable {
             pencil.contentTintColor = .secondaryLabelColor
             pencil.toolTip = "Rename in HomeBar"
             pencil.setAccessibilityLabel("Rename \(entity.name)")
+            let hidden = store.hiddenIDs.contains(entity.id)
+            let visibility = NSButton(title: "", target: self, action: #selector(toggleVisibility(_:)))
+            visibility.image = NSImage(systemSymbolName: hidden ? "eye.slash" : "eye", accessibilityDescription: nil)
+            visibility.isBordered = false
+            visibility.contentTintColor = .secondaryLabelColor
+            visibility.toolTip = hidden ? "Show on dashboard" : "Hide from dashboard"
+            visibility.setAccessibilityLabel("\(hidden ? "Show" : "Hide") \(entity.name) on dashboard")
+            label.textColor = hidden ? .secondaryLabelColor : .labelColor
             let handle = NSImageView()
             handle.image = NSImage(systemSymbolName: "line.3.horizontal", accessibilityDescription: nil)
             handle.contentTintColor = .tertiaryLabelColor
             let cell = NSTableCellView()
-            for view in [icon, names, pencil, handle] {
+            for view in [icon, names, pencil, visibility, handle] {
                 cell.addSubview(view)
                 view.translatesAutoresizingMaskIntoConstraints = false
             }
@@ -207,8 +230,12 @@ struct EntityCustomizationTable: NSViewRepresentable {
                 label.widthAnchor.constraint(lessThanOrEqualTo: names.widthAnchor),
                 pencil.widthAnchor.constraint(equalToConstant: 24),
                 pencil.heightAnchor.constraint(equalToConstant: 24),
-                pencil.trailingAnchor.constraint(equalTo: handle.leadingAnchor, constant: -8),
+                pencil.trailingAnchor.constraint(equalTo: visibility.leadingAnchor, constant: -8),
                 pencil.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+                visibility.widthAnchor.constraint(equalToConstant: 24),
+                visibility.heightAnchor.constraint(equalToConstant: 24),
+                visibility.trailingAnchor.constraint(equalTo: handle.leadingAnchor, constant: -8),
+                visibility.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
                 handle.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -12),
                 handle.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
                 handle.widthAnchor.constraint(equalToConstant: 16)

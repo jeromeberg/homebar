@@ -21,6 +21,65 @@ struct EntityTests {
     }
 
     @Test
+    /** Hide only dashboard rows while retaining selection, local names, order, and discovery visibility. */
+    func dashboardVisibilityPreservesSelection() {
+        let (store, defaults) = store()
+        let ids = ["light.desk", "sensor.air", "fan.bedroom"]
+        for id in ids { store.setSelected(id, selected: true) }
+        store.setLocalName("Reading Lamp", for: ids[0])
+        store.setHidden(ids[0], hidden: true)
+        #expect(store.selectedIDs == ids)
+        #expect(store.selectedEntities.map(\.id) == ids)
+        #expect(store.dashboardEntities.map(\.id) == Array(ids.dropFirst()))
+        #expect(store.groups(search: "Reading", showHidden: false).first?.entities.first?.id == ids[0])
+        #expect(EntityStore(defaults: defaults).hiddenIDs == [ids[0]])
+        store.moveSelected(fromOffsets: IndexSet(integer: 0), toOffset: 3)
+        store.setHidden(ids[0], hidden: false)
+        #expect(store.dashboardEntities.map(\.id) == [ids[1], ids[2], ids[0]])
+        #expect(store.dashboardEntities.last?.name == "Reading Lamp")
+        for id in ids { store.setHidden(id, hidden: true) }
+        #expect(store.dashboardEntities.isEmpty)
+        #expect(store.selectedIDs.count == 3)
+        store.setHidden("camera.unsupported", hidden: true)
+        #expect(!store.hiddenIDs.contains("camera.unsupported"))
+    }
+
+    @Test
+    /** Restore local visibility after restart and keep it separate for each server. */
+    func dashboardVisibilityFollowsServer() {
+        let (store, defaults) = store()
+        store.setSelected("light.desk", selected: true)
+        store.setHidden("light.desk", hidden: true)
+        store.begin(server: "http://home.local")
+        let restored = EntityStore(defaults: defaults)
+        #expect(restored.dashboardEntities.isEmpty)
+        #expect(restored.selectedIDs == ["light.desk"])
+        restored.begin(server: "http://home.local")
+        #expect(restored.hiddenIDs == ["light.desk"])
+        restored.begin(server: "http://cabin.local")
+        restored.setSelected("light.desk", selected: true)
+        #expect(restored.hiddenIDs.isEmpty)
+        #expect(restored.dashboardEntities.map(\.id) == ["light.desk"])
+        restored.begin(server: "http://home.local")
+        #expect(restored.hiddenIDs == ["light.desk"])
+        restored.setHidden("light.desk", hidden: false)
+        #expect(EntityStore(defaults: defaults).dashboardEntities.map(\.id) == ["light.desk"])
+    }
+
+    @Test
+    /** Show every selected entity when existing server preferences have no visibility setting. */
+    func existingPreferencesDefaultToVisible() {
+        let (store, defaults) = store()
+        defaults.set("http://home.local", forKey: "selectedEntitiesServer")
+        defaults.set(["http://home.local": ["selectedIDs": ["light.desk"]]], forKey: "entityPreferencesByServer")
+        let restored = EntityStore(defaults: defaults)
+        #expect(restored.hiddenIDs.isEmpty)
+        #expect(restored.dashboardEntities.map(\.id) == ["light.desk"])
+        store.begin(server: "http://home.local")
+        #expect(store.dashboardEntities.map(\.id) == ["light.desk"])
+    }
+
+    @Test
     /** Keep the Home Assistant name available while saving and resetting a local display name. */
     func defaultNameSurvivesLocalRename() throws {
         let (store, defaults) = store()

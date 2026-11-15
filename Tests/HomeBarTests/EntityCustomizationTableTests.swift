@@ -19,6 +19,42 @@ struct EntityCustomizationTableTests {
     }
 
     @Test
+    /** Keep visibility buttons clickable and toggle the current row without changing selection or order. */
+    func visibilityButtonHidesAndShowsCurrentRow() throws {
+        let defaults = UserDefaults(suiteName: "HomeBarVisibilityTests.\(UUID().uuidString)")!
+        let store = EntityStore(defaults: defaults)
+        let ids = ["light.desk", "fan.bedroom"]
+        for id in ids { store.setSelected(id, selected: true) }
+        let coordinator = EntityCustomizationTable.Coordinator(store: store, entities: store.selectedEntities)
+        let table = EntityCustomizationTableView(frame: NSRect(x: 0, y: 0, width: 480, height: 100))
+        let column = NSTableColumn(identifier: .init("entity"))
+        column.width = 448
+        table.addTableColumn(column)
+        table.rowHeight = 44
+        table.dataSource = coordinator
+        table.delegate = coordinator
+        let scroll = NSScrollView(frame: table.frame)
+        scroll.documentView = table
+        table.reloadData()
+        let cell = try #require(table.view(atColumn: 0, row: 1, makeIfNecessary: true))
+        cell.layoutSubtreeIfNeeded()
+        let hide = try #require(cell.subviews.compactMap { $0 as? NSButton }.first { $0.toolTip == "Hide from dashboard" })
+        let point = table.superview!.convert(NSPoint(x: hide.bounds.midX, y: hide.bounds.midY), from: hide)
+        let hit = table.hitTest(point)
+        #expect(hit === hide || hit?.isDescendant(of: hide) == true)
+        hide.performClick(nil)
+        #expect(store.hiddenIDs == [ids[1]])
+        #expect(store.selectedIDs == ids)
+        #expect(store.dashboardEntities.map(\.id) == [ids[0]])
+        let updatedCell = try #require(table.view(atColumn: 0, row: 1, makeIfNecessary: true))
+        let show = try #require(updatedCell.subviews.compactMap { $0 as? NSButton }.first { $0.toolTip == "Show on dashboard" })
+        show.performClick(nil)
+        #expect(store.hiddenIDs.isEmpty)
+        #expect(store.dashboardEntities.map(\.id) == ids)
+        withExtendedLifetime((coordinator, scroll)) {}
+    }
+
+    @Test
     /** Keep the pencil clickable and rename its current row without starting a reorder. */
     func pencilRenamesCurrentRow() throws {
         let defaults = UserDefaults(suiteName: "HomeBarPencilTests.\(UUID().uuidString)")!

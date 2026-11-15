@@ -4,6 +4,7 @@ import Observation
 @MainActor @Observable
 public final class EntityStore {
     public private(set) var selectedIDs: [String]
+    public private(set) var hiddenIDs: Set<String>
     public private(set) var isLoading = false
     public private(set) var isLive = false
     public private(set) var errors: [String] = []
@@ -15,10 +16,11 @@ public final class EntityStore {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var server: String?
 
-    /** Restore saved selections and local names using the supplied preferences store. */
+    /** Restore saved selections, visibility, and local names using the supplied preferences store. */
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         selectedIDs = defaults.stringArray(forKey: "selectedEntityIDs") ?? []
+        hiddenIDs = Set(defaults.stringArray(forKey: "hiddenEntityIDs") ?? [])
         localNames = defaults.dictionary(forKey: "localEntityNames") as? [String: String] ?? [:]
         server = defaults.string(forKey: "selectedEntitiesServer")
         if let server {
@@ -26,6 +28,7 @@ public final class EntityStore {
             if let preferences {
                 selectedIDs = preferences["selectedIDs"] as? [String] ?? []
                 localNames = preferences["localNames"] as? [String: String] ?? [:]
+                hiddenIDs = Set(preferences["hiddenIDs"] as? [String] ?? [])
             }
             savePreferences()
         }
@@ -57,6 +60,19 @@ public final class EntityStore {
     public var selectedEntities: [HAEntity] {
         let available = Dictionary(uniqueKeysWithValues: entities.map { ($0.id, $0) })
         return selectedIDs.compactMap { available[$0] }
+    }
+
+    /** Return selected entities in dashboard order, excluding locally hidden IDs. */
+    public var dashboardEntities: [HAEntity] {
+        selectedEntities.filter { !hiddenIDs.contains($0.id) }
+    }
+
+    /** Save whether the supplied entity ID is hidden locally without changing its selection. */
+    public func setHidden(_ id: String, hidden: Bool) {
+        guard Self.supports(id) else { return }
+        if hidden { hiddenIDs.insert(id) }
+        else { hiddenIDs.remove(id) }
+        savePreferences()
     }
 
     /** Group supported entities by room, optionally including normally hidden entities and filtering names. */
@@ -101,27 +117,30 @@ public final class EntityStore {
         savePreferences()
     }
 
-    /** Save selections and local names under the active server, retaining unassigned legacy preferences until connection. */
+    /** Save selections, visibility, and local names under the active server, retaining unassigned legacy preferences until connection. */
     private func savePreferences() {
         guard let server else {
             defaults.set(selectedIDs, forKey: "selectedEntityIDs")
             defaults.set(localNames, forKey: "localEntityNames")
+            defaults.set(hiddenIDs.sorted(), forKey: "hiddenEntityIDs")
             return
         }
         var preferences = defaults.dictionary(forKey: "entityPreferencesByServer") ?? [:]
-        preferences[server] = ["selectedIDs": selectedIDs, "localNames": localNames]
+        preferences[server] = ["selectedIDs": selectedIDs, "localNames": localNames, "hiddenIDs": hiddenIDs.sorted()]
         defaults.set(preferences, forKey: "entityPreferencesByServer")
         defaults.removeObject(forKey: "selectedEntityIDs")
         defaults.removeObject(forKey: "localEntityNames")
+        defaults.removeObject(forKey: "hiddenEntityIDs")
     }
 
-    /** Start discovery with the authenticated server's saved selection, order, and local names. */
+    /** Start discovery with the authenticated server's saved selection, order, visibility, and local names. */
     func begin(server: String) {
         if self.server != server {
             let preferences = defaults.dictionary(forKey: "entityPreferencesByServer")?[server] as? [String: Any]
             if self.server != nil || preferences != nil {
                 selectedIDs = preferences?["selectedIDs"] as? [String] ?? []
                 localNames = preferences?["localNames"] as? [String: String] ?? [:]
+                hiddenIDs = Set(preferences?["hiddenIDs"] as? [String] ?? [])
             }
         }
         self.server = server

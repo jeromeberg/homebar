@@ -43,8 +43,15 @@ struct MenuBarView: View {
                                 settingsTab = .entities
                                 openSettings()
                             }
+                        } else if connection.entities.dashboardEntities.isEmpty {
+                            Text("All selected entities are hidden.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            Button("Customize dashboard") {
+                                settingsTab = .customize
+                                openSettings()
+                            }
                         } else {
-                            ForEach(connection.entities.selectedEntities) { entity in
+                            ForEach(connection.entities.dashboardEntities) { entity in
                                 if entity.domain == "sensor" { EntityRowView(entity: entity) }
                                 else if entity.domain == "climate" { ClimateControlView(entity: entity, connection: connection) }
                                 else { DeviceControlView(entity: entity, connection: connection) }
