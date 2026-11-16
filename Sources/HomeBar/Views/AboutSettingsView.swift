@@ -19,6 +19,7 @@ struct AboutSettingsView: View {
             Text("A lightweight menu bar dashboard for Home Assistant.")
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+            Link("homebar.jebrg.com", destination: URL(string: "https://homebar.jebrg.com/")!)
             Link("Privacy Policy", destination: URL(string: "https://homebar.jebrg.com/privacy.html")!)
                 .font(.caption)
             Text("Copyright © 2026 Jerome Berg")
