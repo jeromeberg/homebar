@@ -4,6 +4,7 @@
 
 - Add a build for Mac App Store distribution.
 - Hide the expand arrow for lights and fans with no additional controls.
+- Fixed a bug with toggle buttons after switching devices on/off.
 
 ## [1.4]
 

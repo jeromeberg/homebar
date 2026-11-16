@@ -85,12 +85,15 @@ struct DeviceHeaderView: View {
             }
             Toggle(entity.stateLabel, isOn: Binding(
                 get: { pendingPower ?? (entity.state == "on") },
-                set: { pendingPower = $0 }
+                set: {
+                    guard pendingPower == nil else { return }
+                    pendingPower = $0
+                }
             ))
             .labelsHidden()
             .toggleStyle(.switch)
             .controlSize(.small)
-            .disabled(pendingPower != nil || !canToggle)
+            .disabled(!canToggle)
             .accessibilityLabel(entity.name)
             .help(entity.updateHelp)
         }
