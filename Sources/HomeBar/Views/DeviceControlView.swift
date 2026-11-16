@@ -7,10 +7,18 @@ struct DeviceControlView: View {
     @State private var error: String?
     @State private var isExpanded = false
 
+    private var hasControls: Bool {
+        switch entity.domain {
+        case "light": entity.attributes.supportsBrightness || entity.attributes.temperatureRange != nil
+        case "fan": entity.attributes.supportsFanSpeed || !entity.attributes.fanPresets.isEmpty
+        default: false
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            DeviceHeaderView(entity: entity, isExpanded: $isExpanded, send: send)
-            if isExpanded && entity.domain != "switch" {
+            DeviceHeaderView(entity: entity, hasControls: hasControls, isExpanded: $isExpanded, send: send)
+            if isExpanded && hasControls {
                 Group {
                     if entity.domain == "light" {
                         LightControlView(entity: entity) { _ = await send($0) }
@@ -44,6 +52,7 @@ struct DeviceControlView: View {
 
 struct DeviceHeaderView: View {
     let entity: HAEntity
+    let hasControls: Bool
     @Binding var isExpanded: Bool
     let send: (DeviceCommand) async -> Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -55,7 +64,7 @@ struct DeviceHeaderView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            if entity.domain == "switch" {
+            if !hasControls {
                 label
             } else {
                 Button {
@@ -108,7 +117,7 @@ struct DeviceHeaderView: View {
             Image(systemName: entity.symbol).foregroundStyle(.secondary).frame(width: 20)
             Text(entity.name).lineLimit(2)
             Spacer(minLength: 0)
-            if entity.domain != "switch" {
+            if hasControls {
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.tertiary)

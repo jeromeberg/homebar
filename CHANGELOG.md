@@ -7,6 +7,8 @@
 - Improved the Customize tab with a cleaner UI and an option to hide entities locally
 - Improved server discovery and configuration with a cleaner UI, clearer button behavior, and a status indicator.
 - Made various small UI improvements.
+- Add a build for App Store distribution.
+- Hide the expand arrow for lights and fans with no additional controls.
 
 ## [1.3]
 
