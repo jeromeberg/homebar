@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4]
+
+- Added privacy policy.
+- Improved the onboarding view.
+- Improved the Customize tab with a cleaner UI and an option to hide entities locally
+- Improved server discovery and configuration with a cleaner UI, clearer button behavior, and a status indicator.
+- Made various small UI improvements.
+
 ## [1.3]
 
 - Fixed toggle state handling while waiting on Home Assistant.
