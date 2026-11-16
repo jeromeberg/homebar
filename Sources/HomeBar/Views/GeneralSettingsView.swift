@@ -1,9 +1,13 @@
 import AppKit
+#if !APP_STORE
 import Sparkle
+#endif
 import SwiftUI
 
 struct GeneralSettingsView: View {
+    #if !APP_STORE
     let updater: SPUUpdater
+    #endif
     @AppStorage("menuMaxHeight") private var menuMaxHeight = 400.0
 
     var body: some View {
@@ -18,9 +22,11 @@ struct GeneralSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            #if !APP_STORE
             Section("Updates") {
                 UpdateSettingsView(updater: updater)
             }
+            #endif
             Section {
                 Button("Quit HomeBar") { NSApplication.shared.terminate(nil) }
                     .keyboardShortcut("q")

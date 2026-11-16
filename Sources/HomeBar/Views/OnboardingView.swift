@@ -10,8 +10,16 @@ struct OnboardingView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Label("Welcome to HomeBar", systemImage: "house.fill")
-                .font(.title2.weight(.semibold))
+            Label {
+                Text("Welcome to HomeBar")
+            } icon: {
+                Image(nsImage: NSApplication.shared.applicationIconImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 32, height: 32)
+                    .accessibilityHidden(true)
+            }
+            .font(.title2.weight(.semibold))
             Text("Thanks for downloading and using HomeBar!")
                 .foregroundStyle(.secondary)
 

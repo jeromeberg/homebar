@@ -1,11 +1,13 @@
+import AppKit
 import SwiftUI
 
 struct AboutSettingsView: View {
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: "house.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(.tint)
+            Image(nsImage: NSApplication.shared.applicationIconImage)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 64, height: 64)
                 .accessibilityHidden(true)
             Text("HomeBar")
                 .font(.title2.bold())

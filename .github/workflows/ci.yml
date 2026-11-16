@@ -22,3 +22,6 @@ jobs:
 
       - name: Test
         run: ./test.sh
+
+      - name: Build App Store variant
+        run: xcodebuild -project HomeBar.xcodeproj -scheme HomeBar-AppStore -configuration Release -derivedDataPath .build/xcode CODE_SIGNING_ALLOWED=NO build

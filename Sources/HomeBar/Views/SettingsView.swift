@@ -1,5 +1,7 @@
 import HomeBarCore
+#if !APP_STORE
 import Sparkle
+#endif
 import SwiftUI
 
 enum SettingsTab: Hashable {
@@ -8,14 +10,22 @@ enum SettingsTab: Hashable {
 
 struct SettingsView: View {
     @Bindable var connection: ConnectionViewModel
+    #if !APP_STORE
     let updater: SPUUpdater
+    #endif
     @Binding var selectedTab: SettingsTab
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            GeneralSettingsView(updater: updater)
-                .tabItem { Label("General", systemImage: "gearshape") }
-                .tag(SettingsTab.general)
+            Group {
+                #if APP_STORE
+                GeneralSettingsView()
+                #else
+                GeneralSettingsView(updater: updater)
+                #endif
+            }
+            .tabItem { Label("General", systemImage: "gearshape") }
+            .tag(SettingsTab.general)
             EntityPickerView(store: connection.entities, connected: connection.state == .connected)
                 .tabItem { Label("Entities", systemImage: "checklist") }
                 .tag(SettingsTab.entities)

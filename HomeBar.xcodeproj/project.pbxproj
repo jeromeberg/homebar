@@ -1,0 +1,343 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		61D10F5BB58F9B300C3681AC /* libHomeBarCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5AEE9904BDEF2F7155CA21C8 /* libHomeBarCore.a */; };
+		C291ADC4C0996F7AEF1470A2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 28AAD1477D5182D66D4B03B3 /* Assets.xcassets */; };
+		D32830F86F05030868D8A9D4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 26B2A637F7DC4079D5AB78A5 /* PrivacyInfo.xcprivacy */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		97A2B3CC160530610324B39A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F6F4DA8D93E88A08220E03B7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 84B665F6CD37EDEBDFA7BDFF;
+			remoteInfo = HomeBarCore;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		26B2A637F7DC4079D5AB78A5 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		27CAADF0CA1D2A739C634B76 /* HomeBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = HomeBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		28AAD1477D5182D66D4B03B3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5AEE9904BDEF2F7155CA21C8 /* libHomeBarCore.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libHomeBarCore.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		7B594B6DB375E1BF3F23CDD6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		168017323B2122379789DCFF /* Sources/HomeBar */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources/HomeBar;
+			sourceTree = "<group>";
+		};
+		ABF8E280868D7AB1B45A2A23 /* Sources/HomeBarCore */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources/HomeBarCore;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		88E2BB0BDC1951BD56D6B4E7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		89BA70CDC82F46E3D1AF1EFA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				61D10F5BB58F9B300C3681AC /* libHomeBarCore.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		179F2225059AAC9EC2BB31FD = {
+			isa = PBXGroup;
+			children = (
+				168017323B2122379789DCFF /* Sources/HomeBar */,
+				ABF8E280868D7AB1B45A2A23 /* Sources/HomeBarCore */,
+				87DF60DE337FB58864343E39 /* Resources */,
+				FE0A091FDBFB3E9C31B7A1BD /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		87DF60DE337FB58864343E39 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				28AAD1477D5182D66D4B03B3 /* Assets.xcassets */,
+				26B2A637F7DC4079D5AB78A5 /* PrivacyInfo.xcprivacy */,
+				7B594B6DB375E1BF3F23CDD6 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		FE0A091FDBFB3E9C31B7A1BD /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				27CAADF0CA1D2A739C634B76 /* HomeBar.app */,
+				5AEE9904BDEF2F7155CA21C8 /* libHomeBarCore.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		84B665F6CD37EDEBDFA7BDFF /* HomeBarCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BAAAD7A8BCBCA9866F806921 /* Build configuration list for PBXNativeTarget "HomeBarCore" */;
+			buildPhases = (
+				3F6FAD01C22143C20F572519 /* Sources */,
+				88E2BB0BDC1951BD56D6B4E7 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				ABF8E280868D7AB1B45A2A23 /* Sources/HomeBarCore */,
+			);
+			name = HomeBarCore;
+			productName = HomeBarCore;
+			productReference = 5AEE9904BDEF2F7155CA21C8 /* libHomeBarCore.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		AE8903DFB5541135FC527791 /* HomeBar */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E0EFFAA5AEEB49CADA40A266 /* Build configuration list for PBXNativeTarget "HomeBar" */;
+			buildPhases = (
+				7FF8C9FC6B7E2F79F2A9323E /* Sources */,
+				89BA70CDC82F46E3D1AF1EFA /* Frameworks */,
+				ACA16EC71E4125BC7D8202DD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6AC7050E0D2B66DF5F66E1F7 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				168017323B2122379789DCFF /* Sources/HomeBar */,
+			);
+			name = HomeBar;
+			productName = HomeBar;
+			productReference = 27CAADF0CA1D2A739C634B76 /* HomeBar.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F6F4DA8D93E88A08220E03B7 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2720;
+				TargetAttributes = {
+					AE8903DFB5541135FC527791 = {
+						CreatedOnToolsVersion = 27.2;
+						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.Sandbox = {
+								enabled = 1;
+							};
+						};
+					};
+				};
+			};
+			buildConfigurationList = EA4CB304C2116E38EA8A7F98 /* Build configuration list for PBXProject "HomeBar" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 179F2225059AAC9EC2BB31FD;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FE0A091FDBFB3E9C31B7A1BD /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AE8903DFB5541135FC527791 /* HomeBar */,
+				84B665F6CD37EDEBDFA7BDFF /* HomeBarCore */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		ACA16EC71E4125BC7D8202DD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C291ADC4C0996F7AEF1470A2 /* Assets.xcassets in Resources */,
+				D32830F86F05030868D8A9D4 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3F6FAD01C22143C20F572519 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7FF8C9FC6B7E2F79F2A9323E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6AC7050E0D2B66DF5F66E1F7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 84B665F6CD37EDEBDFA7BDFF /* HomeBarCore */;
+			targetProxy = 97A2B3CC160530610324B39A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		24B7DFA423B1C8A2130AE03E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_TESTABILITY = NO;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		40609A412964FFB79DAE9C3A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5FE44C1D4108931802BC082F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/AppStore.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = T7478CCAPV;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = HomeBar;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jeromeberg.homebar;
+				PRODUCT_NAME = HomeBar;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APP_STORE DEBUG";
+			};
+			name = Debug;
+		};
+		7ED49123ACDEC95A8C7DB0DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				DEFINES_MODULE = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		A8C4CABD5DA2B1F3DAB7CD6F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/AppStore.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = T7478CCAPV;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = HomeBar;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jeromeberg.homebar;
+				PRODUCT_NAME = HomeBar;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) APP_STORE";
+			};
+			name = Release;
+		};
+		D82EDB6CB9336B9CB51CC208 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = NO;
+				DEFINES_MODULE = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BAAAD7A8BCBCA9866F806921 /* Build configuration list for PBXNativeTarget "HomeBarCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7ED49123ACDEC95A8C7DB0DD /* Debug */,
+				D82EDB6CB9336B9CB51CC208 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E0EFFAA5AEEB49CADA40A266 /* Build configuration list for PBXNativeTarget "HomeBar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5FE44C1D4108931802BC082F /* Debug */,
+				A8C4CABD5DA2B1F3DAB7CD6F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EA4CB304C2116E38EA8A7F98 /* Build configuration list for PBXProject "HomeBar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				40609A412964FFB79DAE9C3A /* Debug */,
+				24B7DFA423B1C8A2130AE03E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F6F4DA8D93E88A08220E03B7 /* Project object */;
+}

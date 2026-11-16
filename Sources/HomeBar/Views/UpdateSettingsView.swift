@@ -1,3 +1,4 @@
+#if !APP_STORE
 import Sparkle
 import SwiftUI
 
@@ -24,3 +25,4 @@ struct UpdateSettingsView: View {
             .onReceive(updater.publisher(for: \.automaticallyDownloadsUpdates)) { automaticallyDownloadsUpdates = $0 }
     }
 }
+#endif
