@@ -108,14 +108,24 @@ jobs:
           codesign --force --timestamp --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
 
-      - name: Notarize application
+      - name: Create and sign disk image
+        run: |
+          DMG_ROOT="$RUNNER_TEMP/homebar-dmg"
+          DMG="updates/HomeBar-macOS-arm64.dmg"
+          mkdir -p "$DMG_ROOT" updates
+          ditto .build/HomeBar.app "$DMG_ROOT/HomeBar.app"
+          ln -s /Applications "$DMG_ROOT/Applications"
+          hdiutil create -volname HomeBar -srcfolder "$DMG_ROOT" \
+            -format UDZO -ov "$DMG"
+          codesign --force --timestamp --sign "$APPLE_SIGNING_IDENTITY" "$DMG"
+          codesign --verify --strict --verbose=2 "$DMG"
+
+      - name: Notarize disk image
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: |
-          ditto -c -k --sequesterRsrc --keepParent \
-            .build/HomeBar.app "$RUNNER_TEMP/HomeBar-notarization.zip"
-          xcrun notarytool submit "$RUNNER_TEMP/HomeBar-notarization.zip" \
+          xcrun notarytool submit updates/HomeBar-macOS-arm64.dmg \
             --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --wait --timeout 30m --output-format json > "$RUNNER_TEMP/notarization.json"
@@ -128,16 +138,16 @@ jobs:
             exit 1
           fi
 
-      - name: Staple and package application
+      - name: Staple and validate disk image
         run: |
-          APP=".build/HomeBar.app"
-          xcrun stapler staple "$APP"
-          xcrun stapler validate "$APP"
-          codesign --verify --deep --strict --verbose=2 "$APP"
-          spctl --assess --type execute --verbose=2 "$APP"
-          mkdir -p updates
-          ditto -c -k --sequesterRsrc --keepParent \
-            "$APP" updates/HomeBar-macOS-arm64.zip
+          DMG="updates/HomeBar-macOS-arm64.dmg"
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+          hdiutil verify "$DMG"
+          codesign --verify --strict --verbose=2 "$DMG"
+          spctl --assess --type open --context context:primary-signature --verbose=2 "$DMG"
+          codesign --verify --deep --strict --verbose=2 .build/HomeBar.app
+          spctl --assess --type execute --verbose=2 .build/HomeBar.app
 
       - name: Generate signed update feed
         env:
@@ -158,6 +168,8 @@ jobs:
           signature = "{http://www.andymatuschak.org/xml-namespaces/sparkle}edSignature"
           if len(enclosures) != 1 or not enclosures[0].get(signature):
               raise SystemExit("Expected one signed update. Check that the Sparkle keys match.")
+          if not enclosures[0].get("url", "").endswith("/HomeBar-macOS-arm64.dmg"):
+              raise SystemExit("Expected the update feed to use the release disk image.")
           description = feed.find("./channel/item/description")
           notes = Path("updates/HomeBar-macOS-arm64.md").read_text(encoding="utf-8").strip()
           if description is None or (description.text or "").strip() != notes:
@@ -168,7 +180,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            updates/HomeBar-macOS-arm64.zip
+            updates/HomeBar-macOS-arm64.dmg
             updates/appcast.xml
           fail_on_unmatched_files: true
           body_path: updates/HomeBar-macOS-arm64.md
@@ -183,4 +195,4 @@ jobs:
           if [ -f "$KEYCHAIN" ]; then
             security delete-keychain "$KEYCHAIN"
           fi
-          rm -f "$RUNNER_TEMP/homebar-signing.p12" "$RUNNER_TEMP/HomeBar-notarization.zip"
+          rm -f "$RUNNER_TEMP/homebar-signing.p12"

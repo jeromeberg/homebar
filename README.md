@@ -9,12 +9,9 @@ A lightweight, native macOS menu bar dashboard for Home Assistant.
 
 ## Installation
 
-> [!NOTE]
-> HomeBar is now signed and notarized by Apple! 🎉
+**Download the latest version from the [releases page](https://github.com/jeromeberg/homebar/releases/latest).**
 
-**Download the latest version from [releases](https://github.com/jeromeberg/homebar/releases/latest) page.**
-
-Download the ZIP file, extract it, and move `HomeBar.app` to your Applications folder.
+Open the `.dmg` file and drag HomeBar into the Applications folder.
 
 ## Features
 
